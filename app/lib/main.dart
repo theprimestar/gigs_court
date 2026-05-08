@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ class GigsCourtApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF0F1221),
       ),
       themeMode: ThemeMode.system,
-      home: const Center(child: Text('GigsCourt')),
+      home: const SplashScreen(),
     );
   }
 }
