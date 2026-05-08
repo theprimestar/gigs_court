@@ -1,4 +1,7 @@
 {
-  "name": "Flutter",
-  "image": "mcr.microsoft.com/devcontainers/universal:2"
+  "name": "GigsCourt Flutter",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/flutter:1.0.1": {}
+  }
 }
