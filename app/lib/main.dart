@@ -27,13 +27,11 @@ class GigsCourtApp extends StatelessWidget {
         brightness: Brightness.light,
         primaryColor: const Color(0xFF1A1F71),
         scaffoldBackgroundColor: const Color(0xFFF8F9FC),
-        fontFamily: 'Inter',
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: const Color(0xFF1A1F71),
         scaffoldBackgroundColor: const Color(0xFF0F1221),
-        fontFamily: 'Inter',
       ),
       themeMode: ThemeMode.system,
       home: const Center(child: Text('GigsCourt')),
