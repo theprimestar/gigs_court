@@ -49,7 +49,6 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       final result = await Future.any([
         Future.delayed(const Duration(seconds: 5)),
-        // We'll add proper connectivity check later
         Future.delayed(const Duration(milliseconds: 500), () => true),
       ]);
       return result == true;
@@ -65,16 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const _NextScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 800),
-      ),
-    );
+    Navigator.of(context).pushReplacementNamed('/onboarding');
   }
 
   @override
@@ -138,18 +128,6 @@ class _SplashScreenState extends State<SplashScreen>
           ],
         ),
       ),
-    );
-  }
-}
-
-class _NextScreen extends StatelessWidget {
-  const _NextScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    // Placeholder — will be replaced with Onboarding/Home check
-    return const Scaffold(
-      body: Center(child: Text('Next Screen')),
     );
   }
 }
