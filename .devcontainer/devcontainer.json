@@ -1,0 +1,7 @@
+{
+  "name": "Flutter",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "ghcr.io/devcontainers/features/flutter:1": {}
+  }
+}
