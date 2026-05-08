@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'screens/splash_screen.dart';
+import 'screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +36,23 @@ class GigsCourtApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF0F1221),
       ),
       themeMode: ThemeMode.system,
-      home: const SplashScreen(),
+      initialRoute: '/splash',
+      routes: {
+        '/splash': (context) => const SplashScreen(),
+        '/onboarding': (context) => const OnboardingScreen(),
+        '/auth': (context) => const _AuthPlaceholder(),
+      },
+    );
+  }
+}
+
+class _AuthPlaceholder extends StatelessWidget {
+  const _AuthPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Auth Screen')),
     );
   }
 }
