@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/auth_screen.dart';
+import 'screens/verify_email_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,19 +42,23 @@ class GigsCourtApp extends StatelessWidget {
       routes: {
         '/splash': (context) => const SplashScreen(),
         '/onboarding': (context) => const OnboardingScreen(),
-        '/auth': (context) => const _AuthPlaceholder(),
+        '/auth': (context) => const AuthScreen(),
+        '/verify-email': (context) => const VerifyEmailScreen(),
+        '/profile-setup': (context) =>
+            const _Placeholder(label: 'Profile Setup'),
       },
     );
   }
 }
 
-class _AuthPlaceholder extends StatelessWidget {
-  const _AuthPlaceholder();
+class _Placeholder extends StatelessWidget {
+  final String label;
+  const _Placeholder({required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Auth Screen')),
+    return Scaffold(
+      body: Center(child: Text(label)),
     );
   }
 }
