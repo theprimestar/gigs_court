@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'package:imagekit/imagekit.dart';
+import 'package:flutter_imagekit/flutter_imagekit.dart';
 import '../config.dart';
 
 class ImageKitService {
-  static final _imagekit = ImageKit(
+  static final _imagekit = FlutterImagekit(
     publicKey: AppConfig.imagekitPublicKey,
     urlEndpoint: AppConfig.imagekitUrlEndpoint,
     authenticationEndpoint: AppConfig.imagekitAuthEndpoint,
