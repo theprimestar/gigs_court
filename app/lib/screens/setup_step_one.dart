@@ -27,7 +27,6 @@ class _SetupStepOneState extends State<SetupStepOne> {
   File? _photoFile;
   String? _nameError;
   String? _photoError;
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -278,7 +277,7 @@ class _SetupStepOneState extends State<SetupStepOne> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _submit,
+                    onPressed: _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1A1F71),
                       foregroundColor: Colors.white,
@@ -286,11 +285,9 @@ class _SetupStepOneState extends State<SetupStepOne> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30)),
                     ),
-                    child: _isLoading
-                        ? const LoadingDots()
-                        : const Text('Next',
-                            style: TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.w600)),
+                    child: const Text('Next',
+                        style: TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ),
