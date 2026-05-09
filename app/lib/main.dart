@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'screens/splash_screen.dart';
@@ -15,6 +16,11 @@ void main() async {
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     anonKey: AppConfig.supabaseAnonKey,
+    accessToken: () async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return '';
+      return await user.getIdToken() ?? '';
+    },
   );
 
   runApp(const GigsCourtApp());
