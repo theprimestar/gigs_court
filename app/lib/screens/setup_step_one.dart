@@ -1,6 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../widgets/loading_dots.dart';
 
 class SetupStepOne extends StatefulWidget {
@@ -18,11 +19,12 @@ class SetupStepOne extends StatefulWidget {
 }
 
 class _SetupStepOneState extends State<SetupStepOne> {
-  final _nameController = TextEditingController(text: '');
-  final _phoneController = TextEditingController(text: '');
-  final _bioController = TextEditingController(text: '');
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _bioController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  String? _photoPath;
+  final _picker = ImagePicker();
+  File? _photoFile;
   String? _nameError;
   String? _photoError;
   bool _isLoading = false;
@@ -33,65 +35,97 @@ class _SetupStepOneState extends State<SetupStepOne> {
     _nameController.text = widget.initialData['fullName'] ?? '';
     _phoneController.text = widget.initialData['phone'] ?? '';
     _bioController.text = widget.initialData['bio'] ?? '';
-    _photoPath = widget.initialData['photoPath'];
+    if (widget.initialData['photoPath'] != null &&
+        widget.initialData['photoPath'].toString().isNotEmpty) {
+      _photoFile = File(widget.initialData['photoPath']);
+    }
   }
 
-  void _pickPhoto() async {
-    HapticFeedback.lightImpact();
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final bgColor = isDark ? const Color(0xFF1A1A2E) : Colors.white;
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt_outlined),
-                title: const Text('Take Photo'),
-                onTap: () => Navigator.pop(context, 'camera'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Choose from Gallery'),
-                onTap: () => Navigator.pop(context, 'gallery'),
-              ),
-              if (_photoPath != null && _photoPath!.isNotEmpty)
-                ListTile(
-                  leading: const Icon(Icons.delete_outlined, color: Colors.red),
-                  title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
-                  onTap: () => Navigator.pop(context, 'remove'),
-                ),
-            ],
-          ),
-        );
-      },
+  Future<void> _pickFromGallery() async {
+    final file = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 512,
     );
-
-    if (result == 'remove') {
+    if (file != null) {
       setState(() {
-        _photoPath = null;
-        _photoError = null;
-      });
-    } else if (result == 'gallery') {
-      // Will implement image picker
-      setState(() {
-        _photoPath = 'picked'; // Placeholder until image_picker package is added
+        _photoFile = File(file.path);
         _photoError = null;
       });
     }
   }
 
+  Future<void> _takePhoto() async {
+    final file = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+      maxWidth: 512,
+    );
+    if (file != null) {
+      setState(() {
+        _photoFile = File(file.path);
+        _photoError = null;
+      });
+    }
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _photoFile = null;
+    });
+  }
+
+  void _pickPhoto() {
+    HapticFeedback.lightImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1A1A2E) : Colors.white;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _takePhoto();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickFromGallery();
+              },
+            ),
+            if (_photoFile != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outlined, color: Colors.red),
+                title: const Text('Remove Photo',
+                    style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _removePhoto();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _submit() {
     HapticFeedback.mediumImpact();
-
     setState(() {
       _nameError = null;
       _photoError = null;
@@ -104,7 +138,7 @@ class _SetupStepOneState extends State<SetupStepOne> {
       setState(() => _nameError = 'Full name or business name is required');
       valid = false;
     }
-    if (_photoPath == null || _photoPath!.isEmpty) {
+    if (_photoFile == null) {
       setState(() => _photoError = 'Profile photo is required');
       valid = false;
     }
@@ -112,7 +146,7 @@ class _SetupStepOneState extends State<SetupStepOne> {
 
     widget.onNext({
       'fullName': name,
-      'photoPath': _photoPath ?? '',
+      'photoPath': _photoFile?.path ?? '',
       'phone': _phoneController.text.trim(),
       'bio': _bioController.text.trim(),
     });
@@ -143,7 +177,6 @@ class _SetupStepOneState extends State<SetupStepOne> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Photo picker
                         GestureDetector(
                           onTap: _pickPhoto,
                           child: Stack(
@@ -153,11 +186,19 @@ class _SetupStepOneState extends State<SetupStepOne> {
                                 height: 100,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: const Color(0xFF1A1F71).withValues(alpha: 0.1),
+                                  color: const Color(0xFF1A1F71)
+                                      .withValues(alpha: 0.1),
+                                  image: _photoFile != null
+                                      ? DecorationImage(
+                                          image: FileImage(_photoFile!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                                 ),
-                                child: _photoPath != null && _photoPath!.isNotEmpty
-                                    ? const Icon(Icons.person, size: 60, color: Color(0xFF1A1F71))
-                                    : const Icon(Icons.add_a_photo_outlined, size: 40, color: Color(0xFF1A1F71)),
+                                child: _photoFile == null
+                                    ? const Icon(Icons.add_a_photo_outlined,
+                                        size: 40, color: Color(0xFF1A1F71))
+                                    : null,
                               ),
                               Positioned(
                                 bottom: 0,
@@ -169,7 +210,8 @@ class _SetupStepOneState extends State<SetupStepOne> {
                                     shape: BoxShape.circle,
                                     color: Color(0xFF4A0E17),
                                   ),
-                                  child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                                  child: const Icon(Icons.camera_alt,
+                                      size: 16, color: Colors.white),
                                 ),
                               ),
                             ],
@@ -180,43 +222,41 @@ class _SetupStepOneState extends State<SetupStepOne> {
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
                               _photoError!,
-                              style: const TextStyle(color: Colors.red, fontSize: 13),
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 13),
                             ),
                           ),
                         const SizedBox(height: 32),
-
-                        // Name
                         TextField(
                           controller: _nameController,
                           decoration: InputDecoration(
                             labelText: 'Full Name / Business Name *',
                             prefixIcon: const Icon(Icons.badge_outlined),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             errorText: _nameError,
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // Phone
                         TextField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
                             labelText: 'Phone Number (optional)',
                             prefixIcon: const Icon(Icons.phone_outlined),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // Bio
                         TextField(
                           controller: _bioController,
                           maxLines: 3,
                           decoration: InputDecoration(
                             labelText: 'Bio (optional)',
                             prefixIcon: const Icon(Icons.edit_outlined),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -233,7 +273,6 @@ class _SetupStepOneState extends State<SetupStepOne> {
                   ),
                 ),
               ),
-              // Button
               Padding(
                 padding: const EdgeInsets.only(bottom: 24),
                 child: SizedBox(
@@ -244,11 +283,14 @@ class _SetupStepOneState extends State<SetupStepOne> {
                       backgroundColor: const Color(0xFF1A1F71),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
                     ),
                     child: _isLoading
                         ? const LoadingDots()
-                        : const Text('Next', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                        : const Text('Next',
+                            style: TextStyle(
+                                fontSize: 17, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ),
