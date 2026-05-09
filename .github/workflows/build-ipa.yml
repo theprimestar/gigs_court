@@ -29,8 +29,10 @@ jobs:
             -configuration Release \
             -archivePath build/ios/archive/Runner.xcarchive \
             -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
             archive
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
