@@ -1,7 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'setup_step_one.dart';
 import 'setup_step_services.dart';
 import 'setup_step_workspace.dart';
+import '../services/imagekit_service.dart';
+import '../services/firestore_service.dart';
+import '../widgets/loading_dots.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -12,6 +17,7 @@ class ProfileSetupScreen extends StatefulWidget {
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   int _currentStep = 0;
+  bool _isSaving = false;
 
   final _profileData = <String, dynamic>{
     'fullName': '',
@@ -24,12 +30,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     'workspaceAddress': '',
   };
 
+  final _firestoreService = FirestoreService();
+  final _supabase = Supabase.instance.client;
+
   void _onNext(Map<String, dynamic> data) {
     _profileData.addAll(data);
     if (_currentStep < 2) {
       setState(() => _currentStep++);
     } else {
-      // Complete — will save to Firestore + Supabase
       _completeSetup();
     }
   }
@@ -41,31 +49,100 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Future<void> _completeSetup() async {
-    // Will integrate Firebase + Supabase in the next iteration
-    Navigator.of(context).pushReplacementNamed('/home');
+    setState(() => _isSaving = true);
+
+    try {
+      final uid = _supabase.auth.currentUser?.id;
+      if (uid == null) throw Exception('User not authenticated');
+
+      // 1. Upload photo to ImageKit
+      String photoUrl = '';
+      final photoPath = _profileData['photoPath'] as String;
+      if (photoPath.isNotEmpty) {
+        final uploadedUrl = await ImageKitService.uploadPhoto(
+          File(photoPath),
+          uid,
+        );
+        if (uploadedUrl != null) {
+          photoUrl = uploadedUrl;
+        }
+      }
+
+      // 2. Save to Firestore
+      await _firestoreService.createProfile(
+        fullName: _profileData['fullName'] as String,
+        photoUrl: photoUrl,
+        phone: _profileData['phone'] as String,
+        bio: _profileData['bio'] as String,
+        services: List<String>.from(_profileData['services'] as List),
+      );
+
+      // 3. Save to Supabase
+      await _supabase.rpc('create_profile', params: {
+        'p_id': uid,
+        'p_full_name': _profileData['fullName'] as String,
+        'p_workspace_lat': _profileData['workspaceLat'] as double,
+        'p_workspace_lng': _profileData['workspaceLng'] as double,
+        'p_workspace_address': _profileData['workspaceAddress'] as String,
+        'p_services': List<String>.from(_profileData['services'] as List),
+      });
+
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Setup failed: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: IndexedStack(
-          index: _currentStep,
+        child: Stack(
           children: [
-            SetupStepOne(
-              initialData: _profileData,
-              onNext: _onNext,
+            IndexedStack(
+              index: _currentStep,
+              children: [
+                SetupStepOne(
+                  initialData: _profileData,
+                  onNext: _onNext,
+                ),
+                SetupStepServices(
+                  initialData: _profileData,
+                  onNext: _onNext,
+                  onBack: _onBack,
+                ),
+                SetupStepWorkspace(
+                  initialData: _profileData,
+                  onNext: _onNext,
+                  onBack: _onBack,
+                ),
+              ],
             ),
-            SetupStepServices(
-              initialData: _profileData,
-              onNext: _onNext,
-              onBack: _onBack,
-            ),
-            SetupStepWorkspace(
-              initialData: _profileData,
-              onNext: _onNext,
-              onBack: _onBack,
-            ),
+            if (_isSaving)
+              Container(
+                color: Colors.black.withValues(alpha: 0.5),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      LoadingDots(color: Colors.white),
+                      SizedBox(height: 16),
+                      Text(
+                        'Setting up your profile...',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
