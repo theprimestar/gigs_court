@@ -14,7 +14,7 @@ def flutter_root
     generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
   end
   unless File.exist?(generated_xcode_build_settings_path)
-    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure \"flutter pub get\" is executed first"
+    generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Release.xcconfig'), __FILE__)
   end
 
   File.foreach(generated_xcode_build_settings_path) do |line|
@@ -33,19 +33,10 @@ target 'Runner' do
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-
-  target 'RunnerTests' do
-    inherit! :search_paths
-  end
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-  end
-
-  installer.pods_project.build_configurations.each do |config|
-    config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
-    config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
   end
 end
