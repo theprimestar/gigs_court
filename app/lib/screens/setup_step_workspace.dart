@@ -24,9 +24,8 @@ class SetupStepWorkspace extends StatefulWidget {
 
 class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
   final _addressController = TextEditingController();
-  final _geocodingService = GeocodingService();
   late MapController _mapController;
-  LatLng _center = const LatLng(9.082, 8.6753); // Nigeria center
+  LatLng _center = const LatLng(9.082, 8.6753);
   bool _isLoading = true;
   bool _isResolving = false;
 
@@ -61,7 +60,7 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
 
   Future<void> _resolveAddress() async {
     setState(() => _isResolving = true);
-    final address = await _geocodingService.getAddress(
+    final address = await GeocodingService.getAddress(
       _center.latitude,
       _center.longitude,
     );
@@ -71,16 +70,15 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
     }
   }
 
-  void _onMapMoved(MapPosition position, bool hasGesture) {
-    if (position.center != null) {
+  void _onMapEvent(MapEvent event) {
+    if (event is MapEventMove) {
       setState(() {
-        _center = position.center!;
+        _center = event.center;
       });
     }
-  }
-
-  void _onDragEnd() {
-    _resolveAddress();
+    if (event is MapEventMoveEnd) {
+      _resolveAddress();
+    }
   }
 
   void _submit() {
@@ -148,7 +146,6 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Map
                   Expanded(
                     child: Stack(
                       children: [
@@ -157,12 +154,7 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                           options: MapOptions(
                             initialCenter: _center,
                             initialZoom: 16.0,
-                            onPositionChanged: _onMapMoved,
-                            onMapEvent: (event) {
-                              if (event is MapEventMoveEnd) {
-                                _onDragEnd();
-                              }
-                            },
+                            onMapEvent: _onMapEvent,
                           ),
                           children: [
                             TileLayer(
@@ -172,7 +164,6 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                             ),
                           ],
                         ),
-                        // Fixed pin
                         Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -202,7 +193,6 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                       ],
                     ),
                   ),
-                  // Address field
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
                     child: Column(
@@ -250,7 +240,6 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                       ],
                     ),
                   ),
-                  // Buttons
                   Padding(
                     padding: const EdgeInsets.fromLTRB(28, 8, 28, 24),
                     child: Row(
