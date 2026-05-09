@@ -6,6 +6,7 @@ import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/verify_email_screen.dart';
+import 'screens/profile_setup_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,8 +45,8 @@ class GigsCourtApp extends StatelessWidget {
         '/onboarding': (context) => const OnboardingScreen(),
         '/auth': (context) => const AuthScreen(),
         '/verify-email': (context) => const VerifyEmailScreen(),
-        '/profile-setup': (context) =>
-            const _Placeholder(label: 'Profile Setup'),
+        '/profile-setup': (context) => const ProfileSetupScreen(),
+        '/home': (context) => const _Placeholder(label: 'Home'),
       },
     );
   }
