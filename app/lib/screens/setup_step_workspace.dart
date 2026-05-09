@@ -73,7 +73,7 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
   void _onMapEvent(MapEvent event) {
     if (event is MapEventMove) {
       setState(() {
-        _center = event.center;
+        _center = event.camera.center;
       });
     }
     if (event is MapEventMoveEnd) {
