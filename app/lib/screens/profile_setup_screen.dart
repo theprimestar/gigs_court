@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'setup_step_one.dart';
 import 'setup_step_services.dart';
@@ -52,7 +53,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final uid = _supabase.auth.currentUser?.id;
+      final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) throw Exception('User not authenticated');
 
       // 1. Upload photo to ImageKit
