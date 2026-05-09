@@ -23,6 +23,10 @@ void main() async {
     },
   );
 
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+  };
+
   runApp(const GigsCourtApp());
 }
 
