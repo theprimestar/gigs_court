@@ -90,10 +90,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Setup failed: ${e.toString()}')),
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Setup Error'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    e.toString(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    stackTrace.toString(),
+                    style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       }
     } finally {
