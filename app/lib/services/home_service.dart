@@ -2,35 +2,47 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/provider_card_data.dart';
 
+class PaginatedProviders {
+  final List<ProviderCardData> providers;
+  final String? nextCursorDistance;
+  final String? nextCursorId;
+
+  const PaginatedProviders({
+    required this.providers,
+    this.nextCursorDistance,
+    this.nextCursorId,
+  });
+}
+
 class HomeService {
   final _supabase = Supabase.instance.client;
   final _firestore = FirebaseFirestore.instance;
 
-  Future<List<ProviderCardData>> getTrendingProviders({
+  Future<PaginatedProviders> getTrendingProviders({
     required double viewerLat,
     required double viewerLng,
     int limit = 10,
-    String? cursorDistance,
+    double? cursorDistance,
     String? cursorId,
   }) async {
     final supabaseResponse = await _supabase.rpc('get_nearby_profiles', params: {
       'viewer_lat': viewerLat,
       'viewer_lng': viewerLng,
       'max_distance_meters': 999999999,
-      'p_limit': 50,
+      'p_limit': 30,
       'p_cursor_distance': cursorDistance,
       'p_cursor_id': cursorId,
     });
 
-    if (supabaseResponse == null) return [];
+    if (supabaseResponse == null) return const PaginatedProviders(providers: []);
 
     final nearbyData = List<Map<String, dynamic>>.from(supabaseResponse);
     final uids = nearbyData.map((d) => d['id'] as String).toList();
-    if (uids.isEmpty) return [];
+    if (uids.isEmpty) return const PaginatedProviders(providers: []);
 
     final firestoreData = await _readProfiles(uids);
 
-    final providers = <ProviderCardData>[];
+    final allProviders = <ProviderCardData>[];
 
     for (final uid in uids) {
       final profile = firestoreData[uid];
@@ -45,7 +57,7 @@ class HomeService {
 
       final isActive = gigCount7Days >= 1 || gigCount30Days >= 3;
 
-      providers.add(ProviderCardData(
+      allProviders.add(ProviderCardData(
         uid: uid,
         fullName: profile['fullName'] as String? ?? '',
         photoUrl: profile['photoUrl'] as String? ?? '',
@@ -61,7 +73,7 @@ class HomeService {
       ));
     }
 
-    providers.sort((a, b) {
+    allProviders.sort((a, b) {
       final velocityA = (firestoreData[a.uid]?['gigCount7Days'] as int?) ?? 0;
       final velocityB = (firestoreData[b.uid]?['gigCount7Days'] as int?) ?? 0;
       if (velocityB != velocityA) return velocityB.compareTo(velocityA);
@@ -69,14 +81,28 @@ class HomeService {
       return b.gigCountTotal.compareTo(a.gigCountTotal);
     });
 
-    return providers.take(limit).toList();
+    final paged = allProviders.take(limit).toList();
+
+    String? nextDistance;
+    String? nextId;
+    if (paged.isNotEmpty && allProviders.length > limit) {
+      final last = paged.last;
+      nextDistance = last.distanceMeters.toString();
+      nextId = last.uid;
+    }
+
+    return PaginatedProviders(
+      providers: paged,
+      nextCursorDistance: nextDistance,
+      nextCursorId: nextId,
+    );
   }
 
-  Future<List<ProviderCardData>> getNearbyProviders({
+  Future<PaginatedProviders> getNearbyProviders({
     required double viewerLat,
     required double viewerLng,
     int limit = 10,
-    String? cursorDistance,
+    double? cursorDistance,
     String? cursorId,
   }) async {
     final supabaseResponse = await _supabase.rpc('get_nearby_profiles', params: {
@@ -88,11 +114,11 @@ class HomeService {
       'p_cursor_id': cursorId,
     });
 
-    if (supabaseResponse == null) return [];
+    if (supabaseResponse == null) return const PaginatedProviders(providers: []);
 
     final nearbyData = List<Map<String, dynamic>>.from(supabaseResponse);
     final uids = nearbyData.map((d) => d['id'] as String).toList();
-    if (uids.isEmpty) return [];
+    if (uids.isEmpty) return const PaginatedProviders(providers: []);
 
     final firestoreData = await _readProfiles(uids);
 
@@ -132,7 +158,19 @@ class HomeService {
       return b.gigCountTotal.compareTo(a.gigCountTotal);
     });
 
-    return providers;
+    String? nextDistance;
+    String? nextId;
+    if (providers.isNotEmpty) {
+      final last = providers.last;
+      nextDistance = last.distanceMeters.toString();
+      nextId = last.uid;
+    }
+
+    return PaginatedProviders(
+      providers: providers,
+      nextCursorDistance: nextDistance,
+      nextCursorId: nextId,
+    );
   }
 
   String _formatDate(Timestamp? timestamp) {
@@ -157,7 +195,6 @@ class HomeService {
       }
     }
 
-    // Batch recalculation for stale counters
     await _recalculateStaleCounters(result);
 
     return result;
@@ -180,7 +217,6 @@ class HomeService {
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
     final sevenDaysAgo = now.subtract(const Duration(days: 7));
 
-    // Batch query gigs for all stale providers
     final batch = _firestore.batch();
     final chunks = <List<String>>[];
     for (var i = 0; i < staleUids.length; i += 30) {
@@ -195,7 +231,6 @@ class HomeService {
           .where('completed_at', isGreaterThan: thirtyDaysAgo)
           .get();
 
-      // Group counts by provider
       final counts7 = <String, int>{};
       final counts30 = <String, int>{};
 
@@ -212,7 +247,6 @@ class HomeService {
         }
       }
 
-      // Update profile documents via batch
       for (final uid in chunk) {
         final count7 = counts7[uid] ?? 0;
         final count30 = counts30[uid] ?? 0;
@@ -223,7 +257,6 @@ class HomeService {
           'lastCountReset': FieldValue.serverTimestamp(),
         });
 
-        // Update in-memory map so callers see fresh data immediately
         if (profiles.containsKey(uid)) {
           profiles[uid]!['gigCount7Days'] = count7;
           profiles[uid]!['gigCount30Days'] = count30;
