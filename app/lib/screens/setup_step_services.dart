@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/services_service.dart';
 import '../widgets/loading_dots.dart';
 
@@ -23,6 +24,7 @@ class _SetupStepServicesState extends State<SetupStepServices> {
   final _searchController = TextEditingController();
   final _suggestController = TextEditingController();
   final _servicesService = ServicesService();
+  final _firestore = FirebaseFirestore.instance;
   List<String> _selectedServices = [];
   List<Map<String, dynamic>> _allServices = [];
   List<Map<String, dynamic>> _filteredServices = [];
@@ -98,6 +100,7 @@ class _SetupStepServicesState extends State<SetupStepServices> {
         _filteredServices = List.from(_allServices);
         _error = null;
       });
+      _updateServiceCount(service, 1);
     }
   }
 
@@ -106,6 +109,15 @@ class _SetupStepServicesState extends State<SetupStepServices> {
     setState(() {
       _selectedServices.remove(service);
     });
+    _updateServiceCount(service, -1);
+  }
+
+  void _updateServiceCount(String service, int increment) {
+    final slug = service.toLowerCase().replaceAll(' ', '-');
+    _firestore.collection('metadata').doc('service_counts').set(
+      {slug: FieldValue.increment(increment)},
+      SetOptions(merge: true),
+    );
   }
 
   Future<void> _suggestService() async {
@@ -272,7 +284,6 @@ class _SetupStepServicesState extends State<SetupStepServices> {
                                 ),
                               ),
                             const SizedBox(height: 20),
-                            // Service suggestion
                             Text(
                               "Can't find the service you offer? Type it here.",
                               style: TextStyle(
