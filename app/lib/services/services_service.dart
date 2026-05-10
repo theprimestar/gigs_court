@@ -8,7 +8,7 @@ class ServicesService {
         .from('services')
         .select('name, category')
         .eq('is_active', true)
-        .order('name');
+        .order('name', ascending: true);
 
     return List<Map<String, dynamic>>.from(response);
   }
@@ -19,9 +19,17 @@ class ServicesService {
         .select('name, category')
         .eq('is_active', true)
         .ilike('name', '%$query%')
-        .order('name')
+        .order('name', ascending: true)
         .limit(20);
 
     return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> suggestService(String name) async {
+    await _supabase.from('service_suggestions').insert({
+      'name': name,
+      'status': 'pending',
+      'created_at': DateTime.now().toIso8601String(),
+    });
   }
 }
