@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:go_router/go_router.dart';
 import 'config.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -9,6 +10,7 @@ import 'screens/auth_screen.dart';
 import 'screens/verify_email_screen.dart';
 import 'screens/profile_setup_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/main_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +38,79 @@ class GigsCourtApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    final router = GoRouter(
+      initialLocation: '/splash',
+      routes: [
+        GoRoute(
+          path: '/splash',
+          builder: (context, state) => const SplashScreen(),
+        ),
+        GoRoute(
+          path: '/onboarding',
+          builder: (context, state) => const OnboardingScreen(),
+        ),
+        GoRoute(
+          path: '/auth',
+          builder: (context, state) => const AuthScreen(),
+        ),
+        GoRoute(
+          path: '/verify-email',
+          builder: (context, state) => const VerifyEmailScreen(),
+        ),
+        GoRoute(
+          path: '/profile-setup',
+          builder: (context, state) => const ProfileSetupScreen(),
+        ),
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) =>
+              MainShell(navigationShell: navigationShell),
+          branches: [
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/home',
+                  builder: (context, state) => const HomeScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/search',
+                  builder: (context, state) => const _Placeholder(label: 'Search'),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/chat',
+                  builder: (context, state) => const _Placeholder(label: 'Chat'),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/profile',
+                  builder: (context, state) => const _Placeholder(label: 'Profile'),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/admin',
+                  builder: (context, state) => const _Placeholder(label: 'Admin'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+
+    return MaterialApp.router(
       title: 'GigsCourt',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -66,15 +140,19 @@ class GigsCourtApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.system,
-      initialRoute: '/splash',
-      routes: {
-        '/splash': (context) => const SplashScreen(),
-        '/onboarding': (context) => const OnboardingScreen(),
-        '/auth': (context) => const AuthScreen(),
-        '/verify-email': (context) => const VerifyEmailScreen(),
-        '/profile-setup': (context) => const ProfileSetupScreen(),
-        '/home': (context) => const HomeScreen(),
-      },
+      routerConfig: router,
+    );
+  }
+}
+
+class _Placeholder extends StatelessWidget {
+  final String label;
+  const _Placeholder({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(child: Text(label)),
     );
   }
 }
