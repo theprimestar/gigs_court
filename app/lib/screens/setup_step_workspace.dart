@@ -111,7 +111,7 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
             ? const Center(child: LoadingDots(color: Color(0xFF1A1F71)))
             : Column(
                 children: [
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 28),
                     child: LinearProgressIndicator(
@@ -120,7 +120,7 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                       color: const Color(0xFF1A1F71),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 28),
                     child: Column(
@@ -129,23 +129,31 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                         Text(
                           'Set Your Workspace',
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: textColor,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Drag the map to center the pin on your workspace',
+                          'Set your workspace address — this helps clients find you nearby.',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             color: textColor.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Drag the map to center the pin on your workspace.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: textColor.withValues(alpha: 0.45),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Expanded(
                     child: Stack(
                       children: [
@@ -170,8 +178,8 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                             children: [
                               Icon(
                                 Icons.location_on,
-                                size: 44,
-                                color: const Color(0xFF4A0E17),
+                                size: 40,
+                                color: const Color(0xFF1A1F71),
                                 shadows: [
                                   Shadow(
                                     color: Colors.black.withValues(alpha: 0.3),
@@ -180,11 +188,11 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                                 ],
                               ),
                               Container(
-                                width: 6,
-                                height: 6,
+                                width: 5,
+                                height: 5,
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Color(0xFF4A0E17),
+                                  color: Color(0xFF1A1F71),
                                 ),
                               ),
                             ],
@@ -194,30 +202,33 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
                     child: Column(
                       children: [
                         Row(
                           children: [
                             const Icon(Icons.location_on_outlined,
-                                size: 20, color: Color(0xFF1A1F71)),
+                                size: 18, color: Color(0xFF1A1F71)),
                             const SizedBox(width: 8),
                             Expanded(
                               child: TextField(
                                 controller: _addressController,
+                                style: const TextStyle(fontSize: 14),
                                 decoration: InputDecoration(
                                   hintText: 'Describe your workspace',
+                                  hintStyle: const TextStyle(fontSize: 13),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 12),
+                                      horizontal: 14, vertical: 10),
+                                  isDense: true,
                                   suffixIcon: _isResolving
                                       ? const Padding(
-                                          padding: EdgeInsets.all(12),
+                                          padding: EdgeInsets.all(10),
                                           child: SizedBox(
-                                            width: 16,
-                                            height: 16,
+                                            width: 14,
+                                            height: 14,
                                             child: CircularProgressIndicator(
                                                 strokeWidth: 2),
                                           ),
@@ -232,7 +243,7 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                         Text(
                           'Tap to edit — describe your workspace in your own words',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: textColor.withValues(alpha: 0.5),
                             fontStyle: FontStyle.italic,
                           ),
@@ -241,13 +252,14 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 8, 28, 24),
+                    padding: const EdgeInsets.fromLTRB(28, 6, 28, 24),
                     child: Row(
                       children: [
                         TextButton(
                           onPressed: widget.onBack,
                           child: Text('Back',
                               style: TextStyle(
+                                  fontSize: 14,
                                   color: textColor.withValues(alpha: 0.6))),
                         ),
                         const SizedBox(width: 12),
@@ -255,16 +267,16 @@ class _SetupStepWorkspaceState extends State<SetupStepWorkspace> {
                           child: ElevatedButton(
                             onPressed: _submit,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4A0E17),
+                              backgroundColor: const Color(0xFF1A1F71),
                               foregroundColor: Colors.white,
                               padding:
-                                  const EdgeInsets.symmetric(vertical: 16),
+                                  const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(30)),
                             ),
                             child: const Text('Complete Setup',
                                 style: TextStyle(
-                                    fontSize: 17,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.w600)),
                           ),
                         ),
