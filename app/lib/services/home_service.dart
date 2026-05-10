@@ -30,50 +30,31 @@ class HomeService {
 
     final firestoreData = await _readProfiles(uids);
 
-    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
-    final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-
-    final gigsSnapshot = await _firestore
-        .collection('gigs')
-        .where('provider_id', whereIn: uids)
-        .where('status', isEqualTo: 'completed')
-        .where('completed_at', isGreaterThan: sevenDaysAgo)
-        .get();
-
-    final gigCounts7Days = <String, int>{};
-    final gigCounts30Days = <String, int>{};
-
-    for (final doc in gigsSnapshot.docs) {
-      final data = doc.data();
-      final pid = data['provider_id'] as String;
-      final completedAt = (data['completed_at'] as Timestamp).toDate();
-      if (completedAt.isAfter(sevenDaysAgo)) {
-        gigCounts7Days[pid] = (gigCounts7Days[pid] ?? 0) + 1;
-      }
-      if (completedAt.isAfter(thirtyDaysAgo)) {
-        gigCounts30Days[pid] = (gigCounts30Days[pid] ?? 0) + 1;
-      }
-    }
-
     final providers = <ProviderCardData>[];
 
     for (final uid in uids) {
       final profile = firestoreData[uid];
       if (profile == null) continue;
-      if (gigCounts7Days[uid] == null || gigCounts7Days[uid]! < 1) continue;
-      if ((profile['reviewCount'] as int?) ?? 0 < 1) continue;
 
-      final isActive = (gigCounts7Days[uid] ?? 0) >= 1 || (gigCounts30Days[uid] ?? 0) >= 3;
+      final gigCount7Days = (profile['gigCount7Days'] as int?) ?? 0;
+      final gigCount30Days = (profile['gigCount30Days'] as int?) ?? 0;
+      final reviewCount = (profile['reviewCount'] as int?) ?? 0;
+
+      // Trending filter: must have at least 1 gig in 7 days and 1 review
+      if (gigCount7Days < 1) continue;
+      if (reviewCount < 1) continue;
+
+      final isActive = gigCount7Days >= 1 || gigCount30Days >= 3;
 
       providers.add(ProviderCardData(
         uid: uid,
         fullName: profile['fullName'] as String? ?? '',
         photoUrl: profile['photoUrl'] as String? ?? '',
         rating: (profile['rating'] as num?)?.toDouble() ?? 0.0,
-        reviewCount: (profile['reviewCount'] as int?) ?? 0,
+        reviewCount: reviewCount,
         services: List<String>.from(profile['services'] ?? []),
         distanceMeters: nearbyData.firstWhere((d) => d['id'] == uid)['distance_meters'] ?? 0.0,
-        gigCountThisMonth: gigCounts30Days[uid] ?? 0,
+        gigCountThisMonth: gigCount30Days,
         gigCountTotal: (profile['gigCount'] as int?) ?? 0,
         dateJoined: _formatDate(profile['createdAt'] as Timestamp?),
         workspaceAddress: nearbyData.firstWhere((d) => d['id'] == uid)['workspace_address'] as String? ?? '',
@@ -81,9 +62,10 @@ class HomeService {
       ));
     }
 
+    // Sort: 7-day velocity DESC → rating DESC → total gigs DESC
     providers.sort((a, b) {
-      final velocityA = gigCounts7Days[a.uid] ?? 0;
-      final velocityB = gigCounts7Days[b.uid] ?? 0;
+      final velocityA = (firestoreData[a.uid]?['gigCount7Days'] as int?) ?? 0;
+      final velocityB = (firestoreData[b.uid]?['gigCount7Days'] as int?) ?? 0;
       if (velocityB != velocityA) return velocityB.compareTo(velocityA);
       if (b.rating != a.rating) return b.rating.compareTo(a.rating);
       return b.gigCountTotal.compareTo(a.gigCountTotal);
@@ -116,31 +98,6 @@ class HomeService {
 
     final firestoreData = await _readProfiles(uids);
 
-    final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
-
-    final gigsSnapshot = await _firestore
-        .collection('gigs')
-        .where('provider_id', whereIn: uids)
-        .where('status', isEqualTo: 'completed')
-        .where('completed_at', isGreaterThan: thirtyDaysAgo)
-        .get();
-
-    final gigCounts7Days = <String, int>{};
-    final gigCounts30Days = <String, int>{};
-
-    for (final doc in gigsSnapshot.docs) {
-      final data = doc.data();
-      final pid = data['provider_id'] as String;
-      final completedAt = (data['completed_at'] as Timestamp).toDate();
-      if (completedAt.isAfter(sevenDaysAgo)) {
-        gigCounts7Days[pid] = (gigCounts7Days[pid] ?? 0) + 1;
-      }
-      if (completedAt.isAfter(thirtyDaysAgo)) {
-        gigCounts30Days[pid] = (gigCounts30Days[pid] ?? 0) + 1;
-      }
-    }
-
     final providers = <ProviderCardData>[];
 
     for (final data in nearbyData) {
@@ -148,7 +105,9 @@ class HomeService {
       final profile = firestoreData[uid];
       if (profile == null) continue;
 
-      final isActive = (gigCounts7Days[uid] ?? 0) >= 1 || (gigCounts30Days[uid] ?? 0) >= 3;
+      final gigCount7Days = (profile['gigCount7Days'] as int?) ?? 0;
+      final gigCount30Days = (profile['gigCount30Days'] as int?) ?? 0;
+      final isActive = gigCount7Days >= 1 || gigCount30Days >= 3;
 
       providers.add(ProviderCardData(
         uid: uid,
@@ -158,7 +117,7 @@ class HomeService {
         reviewCount: (profile['reviewCount'] as int?) ?? 0,
         services: List<String>.from(profile['services'] ?? []),
         distanceMeters: data['distance_meters'] ?? 0.0,
-        gigCountThisMonth: gigCounts30Days[uid] ?? 0,
+        gigCountThisMonth: gigCount30Days,
         gigCountTotal: (profile['gigCount'] as int?) ?? 0,
         dateJoined: _formatDate(profile['createdAt'] as Timestamp?),
         workspaceAddress: data['workspace_address'] as String? ?? '',
@@ -166,6 +125,7 @@ class HomeService {
       ));
     }
 
+    // Sort: Distance ASC → activity badge → rating DESC → gig count DESC
     providers.sort((a, b) {
       if (a.distanceMeters != b.distanceMeters) {
         return a.distanceMeters.compareTo(b.distanceMeters);
