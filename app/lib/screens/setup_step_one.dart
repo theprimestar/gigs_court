@@ -167,7 +167,7 @@ class _SetupStepOneState extends State<SetupStepOne> {
                 backgroundColor: textColor.withValues(alpha: 0.1),
                 color: const Color(0xFF1A1F71),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               Expanded(
                 child: SingleChildScrollView(
                   child: Form(
@@ -180,8 +180,8 @@ class _SetupStepOneState extends State<SetupStepOne> {
                           child: Stack(
                             children: [
                               Container(
-                                width: 100,
-                                height: 100,
+                                width: 88,
+                                height: 88,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: const Color(0xFF1A1F71)
@@ -195,21 +195,21 @@ class _SetupStepOneState extends State<SetupStepOne> {
                                 ),
                                 child: _photoFile == null
                                     ? const Icon(Icons.add_a_photo_outlined,
-                                        size: 40, color: Color(0xFF1A1F71))
+                                        size: 36, color: Color(0xFF1A1F71))
                                     : null,
                               ),
                               Positioned(
                                 bottom: 0,
                                 right: 0,
                                 child: Container(
-                                  width: 32,
-                                  height: 32,
+                                  width: 28,
+                                  height: 28,
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Color(0xFF4A0E17),
+                                    color: Color(0xFF1A1F71),
                                   ),
                                   child: const Icon(Icons.camera_alt,
-                                      size: 16, color: Colors.white),
+                                      size: 14, color: Colors.white),
                                 ),
                               ),
                             ],
@@ -217,51 +217,66 @@ class _SetupStepOneState extends State<SetupStepOne> {
                         ),
                         if (_photoError != null)
                           Padding(
-                            padding: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.only(top: 6),
                             child: Text(
                               _photoError!,
                               style: const TextStyle(
-                                  color: Colors.red, fontSize: 13),
+                                  color: Colors.red, fontSize: 12),
                             ),
                           ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 28),
                         TextField(
                           controller: _nameController,
+                          style: const TextStyle(fontSize: 14),
                           decoration: InputDecoration(
                             labelText: 'Full Name / Business Name *',
-                            prefixIcon: const Icon(Icons.badge_outlined),
+                            labelStyle: const TextStyle(fontSize: 13),
+                            prefixIcon: const Icon(Icons.badge_outlined, size: 20),
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            isDense: true,
                             errorText: _nameError,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         TextField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
+                          style: const TextStyle(fontSize: 14),
                           decoration: InputDecoration(
                             labelText: 'Phone Number (optional)',
-                            prefixIcon: const Icon(Icons.phone_outlined),
+                            labelStyle: const TextStyle(fontSize: 13),
+                            prefixIcon: const Icon(Icons.phone_outlined, size: 20),
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            isDense: true,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         TextField(
                           controller: _bioController,
-                          maxLines: 3,
+                          maxLines: 2,
+                          style: const TextStyle(fontSize: 14),
                           decoration: InputDecoration(
                             labelText: 'Bio (optional)',
-                            prefixIcon: const Icon(Icons.edit_outlined),
+                            labelStyle: const TextStyle(fontSize: 13),
+                            prefixIcon: const Icon(Icons.edit_outlined, size: 20),
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            isDense: true,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         Text(
                           'Complete your profile to be discoverable to clients near you',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontStyle: FontStyle.italic,
                             color: const Color(0xFF6B7280),
                           ),
@@ -280,13 +295,13 @@ class _SetupStepOneState extends State<SetupStepOne> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1A1F71),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30)),
                     ),
                     child: const Text('Next',
                         style: TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w600)),
+                            fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ),
