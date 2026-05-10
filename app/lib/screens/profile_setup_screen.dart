@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:go_router/go_router.dart';
 import 'setup_step_one.dart';
 import 'setup_step_services.dart';
 import 'setup_step_workspace.dart';
@@ -89,7 +90,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       });
 
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        context.go('/home');
       }
     } catch (e, stackTrace) {
       if (mounted) {
