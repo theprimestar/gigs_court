@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -69,7 +70,6 @@ class _SplashScreenState extends State<SplashScreen>
     final user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      // Check if profile exists in Firestore
       try {
         final doc = await FirebaseFirestore.instance
             .collection('profiles')
@@ -77,15 +77,15 @@ class _SplashScreenState extends State<SplashScreen>
             .get();
 
         if (doc.exists) {
-          Navigator.of(context).pushReplacementNamed('/home');
+          context.go('/home');
         } else {
-          Navigator.of(context).pushReplacementNamed('/profile-setup');
+          context.go('/profile-setup');
         }
       } catch (_) {
-        Navigator.of(context).pushReplacementNamed('/onboarding');
+        context.go('/onboarding');
       }
     } else {
-      Navigator.of(context).pushReplacementNamed('/onboarding');
+      context.go('/onboarding');
     }
   }
 
