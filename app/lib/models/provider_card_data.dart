@@ -8,6 +8,9 @@ class ProviderCardData {
   final double distanceMeters;
   final int gigCountThisMonth;
   final int gigCountTotal;
+  final String dateJoined;
+  final String workspaceAddress;
+  final bool isActive;
 
   const ProviderCardData({
     required this.uid,
@@ -19,5 +22,8 @@ class ProviderCardData {
     required this.distanceMeters,
     required this.gigCountThisMonth,
     required this.gigCountTotal,
+    required this.dateJoined,
+    required this.workspaceAddress,
+    required this.isActive,
   });
 }
