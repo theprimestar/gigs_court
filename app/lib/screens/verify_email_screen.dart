@@ -17,7 +17,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _email = ModalRoute.of(context)!.settings.arguments as String;
+    _email = GoRouterState.of(context).extra as String;
   }
 
   Future<void> _checkVerified() async {
