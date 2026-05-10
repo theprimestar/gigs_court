@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
 import '../models/provider_card_data.dart';
 import '../services/home_service.dart';
 import '../widgets/provider_card_trending.dart';
@@ -634,7 +635,10 @@ class _ProviderBottomSheet extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/profile/${provider.uid}');
+                  },
                   icon: const Icon(Icons.person_outline, size: 18),
                   label: const Text('View Profile', style: TextStyle(fontSize: 13)),
                   style: OutlinedButton.styleFrom(
