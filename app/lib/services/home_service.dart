@@ -40,7 +40,6 @@ class HomeService {
       final gigCount30Days = (profile['gigCount30Days'] as int?) ?? 0;
       final reviewCount = (profile['reviewCount'] as int?) ?? 0;
 
-      // Trending filter: must have at least 1 gig in 7 days and 1 review
       if (gigCount7Days < 1) continue;
       if (reviewCount < 1) continue;
 
@@ -62,7 +61,6 @@ class HomeService {
       ));
     }
 
-    // Sort: 7-day velocity DESC → rating DESC → total gigs DESC
     providers.sort((a, b) {
       final velocityA = (firestoreData[a.uid]?['gigCount7Days'] as int?) ?? 0;
       final velocityB = (firestoreData[b.uid]?['gigCount7Days'] as int?) ?? 0;
@@ -125,7 +123,6 @@ class HomeService {
       ));
     }
 
-    // Sort: Distance ASC → activity badge → rating DESC → gig count DESC
     providers.sort((a, b) {
       if (a.distanceMeters != b.distanceMeters) {
         return a.distanceMeters.compareTo(b.distanceMeters);
@@ -156,9 +153,84 @@ class HomeService {
           .where(FieldPath.documentId, whereIn: chunk)
           .get();
       for (final doc in snapshot.docs) {
-        result[doc.id] = doc.data();
+        result[doc.id] = doc.data() as Map<String, dynamic>;
       }
     }
+
+    // Batch recalculation for stale counters
+    await _recalculateStaleCounters(result);
+
     return result;
+  }
+
+  Future<void> _recalculateStaleCounters(Map<String, Map<String, dynamic>> profiles) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final staleUids = <String>[];
+
+    for (final entry in profiles.entries) {
+      final lastReset = entry.value['lastCountReset'] as Timestamp?;
+      if (lastReset == null || lastReset.toDate().isBefore(today)) {
+        staleUids.add(entry.key);
+      }
+    }
+
+    if (staleUids.isEmpty) return;
+
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+
+    // Batch query gigs for all stale providers
+    final batch = _firestore.batch();
+    final chunks = <List<String>>[];
+    for (var i = 0; i < staleUids.length; i += 30) {
+      chunks.add(staleUids.sublist(i, i + 30 > staleUids.length ? staleUids.length : i + 30));
+    }
+
+    for (final chunk in chunks) {
+      final gigsSnapshot = await _firestore
+          .collection('gigs')
+          .where('provider_id', whereIn: chunk)
+          .where('status', isEqualTo: 'completed')
+          .where('completed_at', isGreaterThan: thirtyDaysAgo)
+          .get();
+
+      // Group counts by provider
+      final counts7 = <String, int>{};
+      final counts30 = <String, int>{};
+
+      for (final doc in gigsSnapshot.docs) {
+        final data = doc.data();
+        final pid = data['provider_id'] as String;
+        final completedAt = (data['completed_at'] as Timestamp).toDate();
+
+        if (completedAt.isAfter(sevenDaysAgo)) {
+          counts7[pid] = (counts7[pid] ?? 0) + 1;
+        }
+        if (completedAt.isAfter(thirtyDaysAgo)) {
+          counts30[pid] = (counts30[pid] ?? 0) + 1;
+        }
+      }
+
+      // Update profile documents via batch
+      for (final uid in chunk) {
+        final count7 = counts7[uid] ?? 0;
+        final count30 = counts30[uid] ?? 0;
+
+        batch.update(_firestore.collection('profiles').doc(uid), {
+          'gigCount7Days': count7,
+          'gigCount30Days': count30,
+          'lastCountReset': FieldValue.serverTimestamp(),
+        });
+
+        // Update in-memory map so callers see fresh data immediately
+        if (profiles.containsKey(uid)) {
+          profiles[uid]!['gigCount7Days'] = count7;
+          profiles[uid]!['gigCount30Days'] = count30;
+        }
+      }
+    }
+
+    await batch.commit();
   }
 }
