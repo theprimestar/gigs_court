@@ -10,6 +10,7 @@ import 'screens/auth_screen.dart';
 import 'screens/verify_email_screen.dart';
 import 'screens/profile_setup_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/search_screen.dart';
 import 'screens/main_shell.dart';
 
 void main() async {
@@ -77,7 +78,7 @@ class GigsCourtApp extends StatelessWidget {
               routes: [
                 GoRoute(
                   path: '/search',
-                  builder: (context, state) => const _Placeholder(label: 'Search'),
+                  builder: (context, state) => const SearchScreen(),
                 ),
               ],
             ),
