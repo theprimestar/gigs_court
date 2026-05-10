@@ -29,9 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _showScrollToTop = false;
+  bool _usingFallbackLocation = false;
 
-  double _viewerLat = 0;
-  double _viewerLng = 0;
+  double _viewerLat = 9.082;
+  double _viewerLng = 8.6753;
   double? _lastFetchLat;
   double? _lastFetchLng;
   String? _lastCursorDistance;
@@ -117,16 +118,44 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
-  Future<void> _fetchFreshData() async {
+  Future<Position?> _getCurrentPosition() async {
     try {
-      final position = await Geolocator.getCurrentPosition(
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return null;
+      }
+      if (permission == LocationPermission.deniedForever) return null;
+
+      return await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
+    } catch (_) {
+      return null;
+    }
+  }
 
-      final newLat = position.latitude;
-      final newLng = position.longitude;
+  Future<void> _fetchFreshData() async {
+    try {
+      final position = await _getCurrentPosition();
 
-      if (_lastFetchLat != null && _lastFetchLng != null && _nearbyProviders.isNotEmpty) {
+      double newLat;
+      double newLng;
+
+      if (position != null) {
+        newLat = position.latitude;
+        newLng = position.longitude;
+        _usingFallbackLocation = false;
+      } else {
+        newLat = 9.082;
+        newLng = 8.6753;
+        _usingFallbackLocation = true;
+      }
+
+      if (_lastFetchLat != null && _lastFetchLng != null && _nearbyProviders.isNotEmpty && !_usingFallbackLocation) {
         final distance = _calculateDistance(_lastFetchLat!, _lastFetchLng!, newLat, newLng);
         if (distance < 100) {
           if (mounted) {
@@ -404,6 +433,29 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                    if (_usingFallbackLocation)
+                      SliverToBoxAdapter(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_off, size: 16, color: Colors.orange),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Location unavailable. Showing providers from default location.',
+                                  style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(28, 16, 28, 8),
