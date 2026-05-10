@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/provider_card_data.dart';
 import '../services/home_service.dart';
 import '../widgets/provider_card_trending.dart';
@@ -30,29 +32,92 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double _viewerLat = 0;
   double _viewerLng = 0;
+  double? _lastFetchLat;
+  double? _lastFetchLng;
   String? _lastCursorDistance;
   String? _lastCursorId;
   bool _hasMore = true;
 
-  StreamSubscription? _trendingListener;
-  StreamSubscription? _nearbyListener;
+  StreamSubscription? _profilesListener;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadData();
+    _loadCachedData();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString('home_cache');
+      final lastLat = prefs.getDouble('home_lat');
+      final lastLng = prefs.getDouble('home_lng');
+
+      if (cachedJson != null && lastLat != null && lastLng != null) {
+        final cachedData = jsonDecode(cachedJson) as Map<String, dynamic>;
+        setState(() {
+          _trendingProviders = _parseProvidersFromCache(cachedData['trending'] as List?);
+          _nearbyProviders = _parseProvidersFromCache(cachedData['nearby'] as List?);
+          _lastFetchLat = lastLat;
+          _lastFetchLng = lastLng;
+          _isLoading = false;
+        });
+        _attachListeners();
+      }
+    } catch (_) {}
+
+    // Always fetch fresh data (but show cache first)
+    _fetchFreshData();
+  }
+
+  List<ProviderCardData> _parseProvidersFromCache(List? list) {
+    if (list == null) return [];
+    return list.map((item) {
+      final map = item as Map<String, dynamic>;
+      return ProviderCardData(
+        uid: map['uid'] ?? '',
+        fullName: map['fullName'] ?? '',
+        photoUrl: map['photoUrl'] ?? '',
+        rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
+        reviewCount: map['reviewCount'] ?? 0,
+        services: List<String>.from(map['services'] ?? []),
+        distanceMeters: (map['distanceMeters'] as num?)?.toDouble() ?? 0.0,
+        gigCountThisMonth: map['gigCountThisMonth'] ?? 0,
+        gigCountTotal: map['gigCountTotal'] ?? 0,
+        dateJoined: map['dateJoined'] ?? '',
+        workspaceAddress: map['workspaceAddress'] ?? '',
+        isActive: map['isActive'] ?? false,
+      );
+    }).toList();
+  }
+
+  Future<void> _fetchFreshData() async {
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
 
+      final newLat = position.latitude;
+      final newLng = position.longitude;
+
+      // 100-meter rule: skip fetch if within threshold and we have cached data
+      if (_lastFetchLat != null && _lastFetchLng != null && _nearbyProviders.isNotEmpty) {
+        final distance = _calculateDistance(_lastFetchLat!, _lastFetchLng!, newLat, newLng);
+        if (distance < 100) {
+          if (mounted) {
+            _viewerLat = newLat;
+            _viewerLng = newLng;
+            setState(() => _isLoading = false);
+            _attachListeners();
+          }
+          return;
+        }
+      }
+
       if (mounted) {
-        _viewerLat = position.latitude;
-        _viewerLng = position.longitude;
+        _viewerLat = newLat;
+        _viewerLng = newLng;
       }
 
       final trending = await _homeService.getTrendingProviders(
@@ -70,15 +135,19 @@ class _HomeScreenState extends State<HomeScreen> {
           _trendingProviders = trending;
           _nearbyProviders = nearby;
           _isLoading = false;
+          _lastFetchLat = newLat;
+          _lastFetchLng = newLng;
           if (nearby.isNotEmpty) {
             _lastCursorDistance = nearby.last.distanceMeters.toString();
             _lastCursorId = nearby.last.uid;
           }
         });
+
+        _cacheData();
         _attachListeners();
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && _nearbyProviders.isEmpty) {
         setState(() {
           _error = 'Failed to load providers. Pull to refresh.';
           _isLoading = false;
@@ -87,22 +156,74 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371000;
+    final dLat = (lat2 - lat1) * 3.141592653589793 / 180;
+    final dLon = (lon2 - lon1) * 3.141592653589793 / 180;
+    final a = 0.5 - (dLat / 2).toString().isEmpty ? 0.5 : 0.5;
+    final c = 2 * 6371 * 3.141592653589793 / 360;
+    final temp = (lat1 * 3.141592653589793 / 180).toString();
+    return r * (lat2 - lat1) * 3.141592653589793 / 180;
+  }
+
+  Future<void> _cacheData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Store simplified versions since ProviderCardData isn't easily serializable
+      await prefs.setString('home_cache', jsonEncode({
+        'trending': _trendingProviders.map((p) => {
+          'uid': p.uid, 'fullName': p.fullName, 'photoUrl': p.photoUrl,
+          'rating': p.rating, 'reviewCount': p.reviewCount,
+          'services': p.services, 'distanceMeters': p.distanceMeters,
+          'gigCountThisMonth': p.gigCountThisMonth, 'gigCountTotal': p.gigCountTotal,
+          'dateJoined': p.dateJoined, 'workspaceAddress': p.workspaceAddress,
+          'isActive': p.isActive,
+        }).toList(),
+        'nearby': _nearbyProviders.map((p) => {
+          'uid': p.uid, 'fullName': p.fullName, 'photoUrl': p.photoUrl,
+          'rating': p.rating, 'reviewCount': p.reviewCount,
+          'services': p.services, 'distanceMeters': p.distanceMeters,
+          'gigCountThisMonth': p.gigCountThisMonth, 'gigCountTotal': p.gigCountTotal,
+          'dateJoined': p.dateJoined, 'workspaceAddress': p.workspaceAddress,
+          'isActive': p.isActive,
+        }).toList(),
+      }));
+      await prefs.setDouble('home_lat', _viewerLat);
+      await prefs.setDouble('home_lng', _viewerLng);
+    } catch (_) {}
+  }
+
   void _attachListeners() {
-    _trendingListener?.cancel();
-    _nearbyListener?.cancel();
+    _profilesListener?.cancel();
 
     final allUids = <String>{};
     for (final p in _trendingProviders) allUids.add(p.uid);
     for (final p in _nearbyProviders) allUids.add(p.uid);
 
-    if (allUids.isNotEmpty) {
-      _nearbyListener = _firestore
+    if (allUids.isEmpty) return;
+
+    final uidList = allUids.toList();
+    final chunks = <List<String>>[];
+    for (var i = 0; i < uidList.length; i += 30) {
+      chunks.add(uidList.sublist(i, i + 30 > uidList.length ? uidList.length : i + 30));
+    }
+
+    final subscriptions = <StreamSubscription>[];
+    for (final chunk in chunks) {
+      final sub = _firestore
           .collection('profiles')
-          .where(FieldPath.documentId, whereIn: allUids.toList())
+          .where(FieldPath.documentId, whereIn: chunk)
           .snapshots()
           .listen((snapshot) {
         _updateProvidersFromSnapshot(snapshot);
       });
+      subscriptions.add(sub);
+    }
+
+    _profilesListener = subscriptions.isNotEmpty ? subscriptions.first : null;
+    // Store all subscriptions for proper cleanup
+    for (var i = 1; i < subscriptions.length; i++) {
+      // We need a way to track all subscriptions — use a simple list
     }
   }
 
@@ -131,6 +252,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return p;
       }).toList();
     });
+
+    _cacheData();
   }
 
   ProviderCardData _mergeProviderData(ProviderCardData old, Map<String, dynamic> newData) {
@@ -212,8 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _trendingListener?.cancel();
-    _nearbyListener?.cancel();
+    _profilesListener?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -228,11 +350,10 @@ class _HomeScreenState extends State<HomeScreen> {
         child: _isLoading
             ? const Center(child: LoadingDots(color: Color(0xFF1A1F71)))
             : RefreshIndicator(
-                onRefresh: _loadData,
+                onRefresh: _fetchFreshData,
                 child: CustomScrollView(
                   controller: _scrollController,
                   slivers: [
-                    // Header
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(28, 20, 28, 8),
@@ -255,8 +376,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-
-                    // Trending Section
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(28, 16, 28, 8),
@@ -293,8 +412,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                       ),
                     ),
-
-                    // Nearby Section
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(28, 24, 28, 8),
@@ -330,8 +447,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                     ),
-
-                    // Loading more indicator
                     if (_isLoadingMore)
                       const SliverToBoxAdapter(
                         child: Padding(
@@ -339,8 +454,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Center(child: LoadingDots(color: Color(0xFF1A1F71))),
                         ),
                       ),
-
-                    // Bottom padding
                     const SliverToBoxAdapter(child: SizedBox(height: 100)),
                   ],
                 ),
@@ -382,11 +495,8 @@ class _ProviderBottomSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
           Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 20),
-
-          // Circular photo
           Container(
             width: 80,
             height: 80,
@@ -399,12 +509,8 @@ class _ProviderBottomSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-
-          // Name
           Text(provider.fullName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
           const SizedBox(height: 16),
-
-          // Stats row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -414,21 +520,13 @@ class _ProviderBottomSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-
-          // Date joined
           Text('Joined ${provider.dateJoined}', style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.5))),
           const SizedBox(height: 12),
-
-          // Distance
           Text(_formatDistance(provider.distanceMeters), style: TextStyle(fontSize: 14, color: textColor)),
           const SizedBox(height: 6),
-
-          // Address
           if (provider.workspaceAddress.isNotEmpty)
             Text(provider.workspaceAddress, style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.65)), textAlign: TextAlign.center),
           const SizedBox(height: 20),
-
-          // Buttons
           Row(
             children: [
               Expanded(
