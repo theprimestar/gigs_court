@@ -34,9 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
   double _viewerLng = 8.6753;
   double? _lastFetchLat;
   double? _lastFetchLng;
-  String? _lastNearbyCursorDistance;
+  double? _lastNearbyCursorDistance;
   String? _lastNearbyCursorId;
-  String? _lastTrendingCursorDistance;
+  double? _lastTrendingCursorDistance;
   String? _lastTrendingCursorId;
   bool _hasMoreNearby = true;
   bool _hasMoreTrending = true;
@@ -256,11 +256,10 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoadingMore = true);
 
     try {
-      final cursorDistance = _lastNearbyCursorDistance != null ? double.tryParse(_lastNearbyCursorDistance!) : null;
       final result = await _homeService.getNearbyProviders(
         viewerLat: _viewerLat,
         viewerLng: _viewerLng,
-        cursorDistance: cursorDistance,
+        cursorDistance: _lastNearbyCursorDistance,
         cursorId: _lastNearbyCursorId,
       );
 
@@ -291,11 +290,10 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoadingMoreTrending = true);
 
     try {
-      final cursorDistance = _lastTrendingCursorDistance != null ? double.tryParse(_lastTrendingCursorDistance!) : null;
       final result = await _homeService.getTrendingProviders(
         viewerLat: _viewerLat,
         viewerLng: _viewerLng,
-        cursorDistance: cursorDistance,
+        cursorDistance: _lastTrendingCursorDistance,
         cursorId: _lastTrendingCursorId,
       );
 
