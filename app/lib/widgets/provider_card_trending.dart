@@ -45,7 +45,6 @@ class ProviderCardTrending extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Gradient overlay
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -61,7 +60,6 @@ class ProviderCardTrending extends StatelessWidget {
                 ),
               ),
             ),
-            // Content
             Positioned(
               left: 12,
               right: 12,
@@ -97,12 +95,18 @@ class ProviderCardTrending extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    '⭐ ${provider.rating.toStringAsFixed(1)} (${provider.reviewCount})',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: textColor.withValues(alpha: 0.85),
-                    ),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, size: 12, color: Color(0xFFFFD700)),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${provider.rating.toStringAsFixed(1)} (${provider.reviewCount})',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: textColor.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
