@@ -47,6 +47,30 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadCachedData();
   }
 
+  void _showErrorDialog(String title, dynamic error, dynamic stackTrace) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(error.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Text(stackTrace.toString(), style: const TextStyle(fontSize: 10, fontFamily: 'monospace')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+        ],
+      ),
+    );
+  }
+
   Future<void> _loadCachedData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -65,7 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
         });
         _attachListeners();
       }
-    } catch (_) {}
+    } catch (e, stack) {
+      _showErrorDialog('Cache Error', e, stack);
+    }
 
     _fetchFreshData();
   }
@@ -144,9 +170,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _cacheData();
         _attachListeners();
       }
-    } catch (e) {
-      if (mounted && _nearbyProviders.isEmpty) {
+    } catch (e, stack) {
+      if (mounted) {
         setState(() => _isLoading = false);
+        _showErrorDialog('Home Error', e, stack);
       }
     }
   }
@@ -185,7 +212,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }));
       await prefs.setDouble('home_lat', _viewerLat);
       await prefs.setDouble('home_lng', _viewerLng);
-    } catch (_) {}
+    } catch (e, stack) {
+      _showErrorDialog('Cache Error', e, stack);
+    }
   }
 
   void _attachListeners() {
@@ -213,6 +242,8 @@ class _HomeScreenState extends State<HomeScreen> {
           .snapshots()
           .listen((snapshot) {
         _updateProvidersFromSnapshot(snapshot);
+      }, onError: (e, stack) {
+        _showErrorDialog('Listener Error', e, stack);
       });
       _listeners.add(sub);
     }
@@ -292,8 +323,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoadingMore = false;
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => _isLoadingMore = false);
+    } catch (e, stack) {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+        _showErrorDialog('Load More Error', e, stack);
+      }
     }
   }
 
