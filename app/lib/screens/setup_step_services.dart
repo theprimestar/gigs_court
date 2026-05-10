@@ -21,6 +21,7 @@ class SetupStepServices extends StatefulWidget {
 
 class _SetupStepServicesState extends State<SetupStepServices> {
   final _searchController = TextEditingController();
+  final _suggestController = TextEditingController();
   final _servicesService = ServicesService();
   List<String> _selectedServices = [];
   List<Map<String, dynamic>> _allServices = [];
@@ -28,6 +29,7 @@ class _SetupStepServicesState extends State<SetupStepServices> {
   String? _error;
   bool _isLoading = true;
   bool _isSearching = false;
+  bool _isSuggesting = false;
 
   @override
   void initState() {
@@ -106,6 +108,32 @@ class _SetupStepServicesState extends State<SetupStepServices> {
     });
   }
 
+  Future<void> _suggestService() async {
+    final text = _suggestController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() => _isSuggesting = true);
+
+    try {
+      await _servicesService.suggestService(text);
+      _addService(text);
+      _suggestController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Service suggested! It will appear on your profile.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to suggest service. Try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSuggesting = false);
+    }
+  }
+
   void _submit() {
     HapticFeedback.mediumImpact();
 
@@ -120,6 +148,7 @@ class _SetupStepServicesState extends State<SetupStepServices> {
   @override
   void dispose() {
     _searchController.dispose();
+    _suggestController.dispose();
     super.dispose();
   }
 
@@ -151,24 +180,32 @@ class _SetupStepServicesState extends State<SetupStepServices> {
                             Text(
                               'Services You Offer',
                               style: TextStyle(
-                                fontSize: 22,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: textColor,
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Add the services you offer — this helps clients who need your services find you.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: textColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
                             TextField(
                               controller: _searchController,
                               onChanged: _onSearch,
                               decoration: InputDecoration(
                                 hintText: 'Search services...',
-                                prefixIcon: const Icon(Icons.search),
+                                prefixIcon: const Icon(Icons.search, size: 20),
                                 suffixIcon: _isSearching
                                     ? const Padding(
                                         padding: EdgeInsets.all(12),
                                         child: SizedBox(
-                                          width: 20,
-                                          height: 20,
+                                          width: 16,
+                                          height: 16,
                                           child: CircularProgressIndicator(
                                               strokeWidth: 2),
                                         ),
@@ -176,18 +213,19 @@ class _SetupStepServicesState extends State<SetupStepServices> {
                                     : null,
                                 border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                isDense: true,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
                             if (_selectedServices.isNotEmpty)
                               Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
+                                spacing: 6,
+                                runSpacing: 6,
                                 children: _selectedServices.map((service) {
                                   return Chip(
-                                    label: Text(service),
-                                    deleteIcon:
-                                        const Icon(Icons.close, size: 18),
+                                    label: Text(service, style: const TextStyle(fontSize: 13)),
+                                    deleteIcon: const Icon(Icons.close, size: 16),
                                     onDeleted: () => _removeService(service),
                                     backgroundColor: const Color(0xFF1A1F71)
                                         .withValues(alpha: 0.1),
@@ -198,24 +236,26 @@ class _SetupStepServicesState extends State<SetupStepServices> {
                                           color: const Color(0xFF1A1F71)
                                               .withValues(alpha: 0.3)),
                                     ),
+                                    visualDensity: VisualDensity.compact,
                                   );
                                 }).toList(),
                               ),
                             if (_selectedServices.isNotEmpty)
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                             ...(_filteredServices
                                 .where((s) => !_selectedServices
                                     .contains(s['name'] as String))
                                 .map((service) => ListTile(
-                                      title: Text(service['name'] as String),
+                                      title: Text(service['name'] as String, style: const TextStyle(fontSize: 14)),
                                       subtitle: Text(
                                         service['category'] as String,
                                         style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 11,
                                           color: textColor.withValues(alpha: 0.5),
                                         ),
                                       ),
                                       dense: true,
+                                      visualDensity: VisualDensity.compact,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
@@ -228,14 +268,62 @@ class _SetupStepServicesState extends State<SetupStepServices> {
                                 child: Text(
                                   _error!,
                                   style: const TextStyle(
-                                      color: Colors.red, fontSize: 13),
+                                      color: Colors.red, fontSize: 12),
                                 ),
                               ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 20),
+                            // Service suggestion
+                            Text(
+                              "Can't find the service you offer? Type it here.",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: textColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _suggestController,
+                                    decoration: InputDecoration(
+                                      hintText: 'Type a new service...',
+                                      border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 10),
+                                      isDense: true,
+                                    ),
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: _isSuggesting ? null : _suggestService,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1A1F71),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: _isSuggesting
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Text('Suggest', style: TextStyle(fontSize: 13)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
                             Text(
                               'Select at least 1 service to be discoverable',
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontStyle: FontStyle.italic,
                                 color: const Color(0xFF6B7280),
                               ),
@@ -251,8 +339,9 @@ class _SetupStepServicesState extends State<SetupStepServices> {
                     TextButton(
                       onPressed: widget.onBack,
                       child: Text('Back',
-                          style:
-                              TextStyle(color: textColor.withValues(alpha: 0.6))),
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: textColor.withValues(alpha: 0.6))),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -261,13 +350,13 @@ class _SetupStepServicesState extends State<SetupStepServices> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1A1F71),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30)),
                         ),
                         child: const Text('Next',
                             style: TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.w600)),
+                                fontSize: 15, fontWeight: FontWeight.w600)),
                       ),
                     ),
                   ],
