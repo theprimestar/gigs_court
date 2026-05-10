@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({super.key});
@@ -29,7 +30,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     if (user != null && user.emailVerified) {
       if (mounted) {
         HapticFeedback.heavyImpact();
-        Navigator.of(context).pushReplacementNamed('/profile-setup');
+        context.go('/profile-setup');
       }
     } else {
       if (mounted) {
