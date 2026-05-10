@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -28,7 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _showScrollToTop = false;
-  String? _error;
 
   double _viewerLat = 0;
   double _viewerLng = 0;
@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _lastCursorId;
   bool _hasMore = true;
 
-  StreamSubscription? _profilesListener;
+  final List<StreamSubscription> _listeners = [];
 
   @override
   void initState() {
@@ -67,7 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (_) {}
 
-    // Always fetch fresh data (but show cache first)
     _fetchFreshData();
   }
 
@@ -101,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final newLat = position.latitude;
       final newLng = position.longitude;
 
-      // 100-meter rule: skip fetch if within threshold and we have cached data
       if (_lastFetchLat != null && _lastFetchLng != null && _nearbyProviders.isNotEmpty) {
         final distance = _calculateDistance(_lastFetchLat!, _lastFetchLng!, newLat, newLng);
         if (distance < 100) {
@@ -148,28 +146,25 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted && _nearbyProviders.isEmpty) {
-        setState(() {
-          _error = 'Failed to load providers. Pull to refresh.';
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
 
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const r = 6371000;
-    final dLat = (lat2 - lat1) * 3.141592653589793 / 180;
-    final dLon = (lon2 - lon1) * 3.141592653589793 / 180;
-    final a = 0.5 - (dLat / 2).toString().isEmpty ? 0.5 : 0.5;
-    final c = 2 * 6371 * 3.141592653589793 / 360;
-    final temp = (lat1 * 3.141592653589793 / 180).toString();
-    return r * (lat2 - lat1) * 3.141592653589793 / 180;
+    const r = 6371000.0;
+    final dLat = (lat2 - lat1) * pi / 180.0;
+    final dLon = (lon2 - lon1) * pi / 180.0;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180.0) * cos(lat2 * pi / 180.0) *
+        sin(dLon / 2) * sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return r * c;
   }
 
   Future<void> _cacheData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // Store simplified versions since ProviderCardData isn't easily serializable
       await prefs.setString('home_cache', jsonEncode({
         'trending': _trendingProviders.map((p) => {
           'uid': p.uid, 'fullName': p.fullName, 'photoUrl': p.photoUrl,
@@ -194,7 +189,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _attachListeners() {
-    _profilesListener?.cancel();
+    for (final sub in _listeners) {
+      sub.cancel();
+    }
+    _listeners.clear();
 
     final allUids = <String>{};
     for (final p in _trendingProviders) allUids.add(p.uid);
@@ -208,7 +206,6 @@ class _HomeScreenState extends State<HomeScreen> {
       chunks.add(uidList.sublist(i, i + 30 > uidList.length ? uidList.length : i + 30));
     }
 
-    final subscriptions = <StreamSubscription>[];
     for (final chunk in chunks) {
       final sub = _firestore
           .collection('profiles')
@@ -217,13 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
           .listen((snapshot) {
         _updateProvidersFromSnapshot(snapshot);
       });
-      subscriptions.add(sub);
-    }
-
-    _profilesListener = subscriptions.isNotEmpty ? subscriptions.first : null;
-    // Store all subscriptions for proper cleanup
-    for (var i = 1; i < subscriptions.length; i++) {
-      // We need a way to track all subscriptions — use a simple list
+      _listeners.add(sub);
     }
   }
 
@@ -335,7 +326,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _profilesListener?.cancel();
+    for (final sub in _listeners) {
+      sub.cancel();
+    }
+    _listeners.clear();
     _scrollController.dispose();
     super.dispose();
   }
