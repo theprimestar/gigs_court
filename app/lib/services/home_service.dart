@@ -4,7 +4,7 @@ import '../models/provider_card_data.dart';
 
 class PaginatedProviders {
   final List<ProviderCardData> providers;
-  final String? nextCursorDistance;
+  final double? nextCursorDistance;
   final String? nextCursorId;
 
   const PaginatedProviders({
@@ -83,11 +83,11 @@ class HomeService {
 
     final paged = allProviders.take(limit).toList();
 
-    String? nextDistance;
+    double? nextDistance;
     String? nextId;
     if (paged.isNotEmpty && allProviders.length > limit) {
       final last = paged.last;
-      nextDistance = last.distanceMeters.toString();
+      nextDistance = last.distanceMeters;
       nextId = last.uid;
     }
 
@@ -158,11 +158,11 @@ class HomeService {
       return b.gigCountTotal.compareTo(a.gigCountTotal);
     });
 
-    String? nextDistance;
+    double? nextDistance;
     String? nextId;
     if (providers.isNotEmpty) {
       final last = providers.last;
-      nextDistance = last.distanceMeters.toString();
+      nextDistance = last.distanceMeters;
       nextId = last.uid;
     }
 
