@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -36,7 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      Navigator.of(context).pushReplacementNamed('/auth');
+      context.go('/auth');
     }
   }
 
@@ -70,7 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 alignment: Alignment.topRight,
                 child: TextButton(
                   onPressed: () {
-                    Navigator.of(context).pushReplacementNamed('/auth');
+                    context.go('/auth');
                   },
                   child: Text(
                     'Skip',
