@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gigs_court/services/supabase_auth_service.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -68,7 +69,6 @@ class _AuthScreenState extends State<AuthScreen>
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
 
-    // Validation
     bool valid = true;
     if (email.isEmpty || !email.contains('@')) {
       setState(() => _emailError = 'Enter a valid email');
@@ -101,8 +101,7 @@ class _AuthScreenState extends State<AuthScreen>
         if (user != null && !user.emailVerified) {
           await FirebaseAuth.instance.signOut();
           if (mounted) {
-            Navigator.of(context).pushReplacementNamed('/verify-email',
-                arguments: email);
+            context.go('/verify-email', extra: email);
           }
           return;
         }
@@ -116,18 +115,16 @@ class _AuthScreenState extends State<AuthScreen>
         await credential.user?.sendEmailVerification();
 
         if (mounted) {
-          Navigator.of(context)
-              .pushReplacementNamed('/verify-email', arguments: email);
+          context.go('/verify-email', extra: email);
         }
         return;
       }
 
-      // Get Supabase token after successful login
       await SupabaseAuthService.getSupabaseToken();
 
       if (mounted) {
         HapticFeedback.heavyImpact();
-        Navigator.of(context).pushReplacementNamed('/profile-setup');
+        context.go('/profile-setup');
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
