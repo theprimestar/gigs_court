@@ -8,6 +8,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/verify_email_screen.dart';
 import 'screens/profile_setup_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,12 +42,28 @@ class GigsCourtApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.light,
         primaryColor: const Color(0xFF1A1F71),
-        scaffoldBackgroundColor: const Color(0xFFF8F9FC),
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        cardColor: Colors.white,
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: const Color(0xFF1A1F71),
-        scaffoldBackgroundColor: const Color(0xFF0F1221),
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        cardColor: const Color(0xFF1E1E1E),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF1E1E1E),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
       themeMode: ThemeMode.system,
       initialRoute: '/splash',
@@ -56,20 +73,8 @@ class GigsCourtApp extends StatelessWidget {
         '/auth': (context) => const AuthScreen(),
         '/verify-email': (context) => const VerifyEmailScreen(),
         '/profile-setup': (context) => const ProfileSetupScreen(),
-        '/home': (context) => const _Placeholder(label: 'Home'),
+        '/home': (context) => const HomeScreen(),
       },
-    );
-  }
-}
-
-class _Placeholder extends StatelessWidget {
-  final String label;
-  const _Placeholder({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(child: Text(label)),
     );
   }
 }
