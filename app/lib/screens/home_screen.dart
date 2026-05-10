@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/provider_card_data.dart';
 import '../services/home_service.dart';
@@ -22,7 +20,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _homeService = HomeService();
   final _scrollController = ScrollController();
-  final _firestore = FirebaseFirestore.instance;
 
   List<ProviderCardData> _trendingProviders = [];
   List<ProviderCardData> _nearbyProviders = [];
@@ -38,8 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _lastCursorDistance;
   String? _lastCursorId;
   bool _hasMore = true;
-
-  final List<StreamSubscription> _listeners = [];
 
   @override
   void initState() {
@@ -88,13 +83,12 @@ class _HomeScreenState extends State<HomeScreen> {
           _lastFetchLng = lastLng;
           _isLoading = false;
         });
-        _attachListeners();
       }
     } catch (e, stack) {
       _showErrorDialog('Cache Error', e, stack);
     }
 
-    _fetchFreshData();
+    _fetchFreshData(isRefresh: false);
   }
 
   List<ProviderCardData> _parseProvidersFromCache(List? list) {
@@ -138,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _fetchFreshData() async {
+  Future<void> _fetchFreshData({bool isRefresh = false}) async {
     try {
       final position = await _getCurrentPosition();
 
@@ -155,14 +149,17 @@ class _HomeScreenState extends State<HomeScreen> {
         _usingFallbackLocation = true;
       }
 
-      if (_lastFetchLat != null && _lastFetchLng != null && _nearbyProviders.isNotEmpty && !_usingFallbackLocation) {
+      if (!isRefresh &&
+          _lastFetchLat != null &&
+          _lastFetchLng != null &&
+          _nearbyProviders.isNotEmpty &&
+          !_usingFallbackLocation) {
         final distance = _calculateDistance(_lastFetchLat!, _lastFetchLng!, newLat, newLng);
         if (distance < 100) {
           if (mounted) {
             _viewerLat = newLat;
             _viewerLng = newLng;
             setState(() => _isLoading = false);
-            _attachListeners();
           }
           return;
         }
@@ -188,6 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _trendingProviders = trending;
           _nearbyProviders = nearby;
           _isLoading = false;
+          _hasMore = true;
           _lastFetchLat = newLat;
           _lastFetchLng = newLng;
           if (nearby.isNotEmpty) {
@@ -197,7 +195,6 @@ class _HomeScreenState extends State<HomeScreen> {
         });
 
         _cacheData();
-        _attachListeners();
       }
     } catch (e, stack) {
       if (mounted) {
@@ -244,87 +241,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e, stack) {
       _showErrorDialog('Cache Error', e, stack);
     }
-  }
-
-  void _attachListeners() {
-    for (final sub in _listeners) {
-      sub.cancel();
-    }
-    _listeners.clear();
-
-    final allUids = <String>{};
-    for (final p in _trendingProviders) allUids.add(p.uid);
-    for (final p in _nearbyProviders) allUids.add(p.uid);
-
-    if (allUids.isEmpty) return;
-
-    final uidList = allUids.toList();
-    final chunks = <List<String>>[];
-    for (var i = 0; i < uidList.length; i += 30) {
-      chunks.add(uidList.sublist(i, i + 30 > uidList.length ? uidList.length : i + 30));
-    }
-
-    for (final chunk in chunks) {
-      final sub = _firestore
-          .collection('profiles')
-          .where(FieldPath.documentId, whereIn: chunk)
-          .snapshots()
-          .listen((snapshot) {
-        _updateProvidersFromSnapshot(snapshot);
-      }, onError: (e, stack) {
-        _showErrorDialog('Listener Error', e, stack);
-      });
-      _listeners.add(sub);
-    }
-  }
-
-  void _updateProvidersFromSnapshot(QuerySnapshot snapshot) {
-    if (!mounted) return;
-
-    final updatedData = <String, Map<String, dynamic>>{};
-    for (final doc in snapshot.docs) {
-      updatedData[doc.id] = doc.data() as Map<String, dynamic>;
-    }
-
-    if (updatedData.isEmpty) return;
-
-    setState(() {
-      _trendingProviders = _trendingProviders.map((p) {
-        if (updatedData.containsKey(p.uid)) {
-          return _mergeProviderData(p, updatedData[p.uid]!);
-        }
-        return p;
-      }).toList();
-
-      _nearbyProviders = _nearbyProviders.map((p) {
-        if (updatedData.containsKey(p.uid)) {
-          return _mergeProviderData(p, updatedData[p.uid]!);
-        }
-        return p;
-      }).toList();
-    });
-
-    _cacheData();
-  }
-
-  ProviderCardData _mergeProviderData(ProviderCardData old, Map<String, dynamic> newData) {
-    final gigCount7Days = (newData['gigCount7Days'] as int?) ?? 0;
-    final gigCount30Days = (newData['gigCount30Days'] as int?) ?? 0;
-
-    return ProviderCardData(
-      uid: old.uid,
-      fullName: newData['fullName'] as String? ?? old.fullName,
-      photoUrl: newData['photoUrl'] as String? ?? old.photoUrl,
-      rating: (newData['rating'] as num?)?.toDouble() ?? old.rating,
-      reviewCount: (newData['reviewCount'] as int?) ?? old.reviewCount,
-      services: List<String>.from(newData['services'] ?? old.services),
-      distanceMeters: old.distanceMeters,
-      gigCountThisMonth: gigCount30Days,
-      gigCountTotal: (newData['gigCount'] as int?) ?? old.gigCountTotal,
-      dateJoined: old.dateJoined,
-      workspaceAddress: old.workspaceAddress,
-      isActive: gigCount7Days >= 1 || gigCount30Days >= 3,
-    );
   }
 
   Future<void> _loadMoreNearby() async {
@@ -389,10 +305,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    for (final sub in _listeners) {
-      sub.cancel();
-    }
-    _listeners.clear();
     _scrollController.dispose();
     super.dispose();
   }
@@ -407,30 +319,15 @@ class _HomeScreenState extends State<HomeScreen> {
         child: _isLoading
             ? const Center(child: LoadingDots(color: Color(0xFF1A1F71)))
             : RefreshIndicator(
-                onRefresh: _fetchFreshData,
+                onRefresh: () => _fetchFreshData(isRefresh: true),
                 child: CustomScrollView(
                   controller: _scrollController,
                   slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(28, 20, 28, 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('Gigs', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
-                                Text('Court', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
-                              ],
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.notifications_outlined, color: textColor),
-                              onPressed: () {},
-                            ),
-                          ],
-                        ),
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _CollapsingHeaderDelegate(
+                        textColor: textColor,
+                        isDark: isDark,
                       ),
                     ),
                     if (_usingFallbackLocation)
@@ -546,6 +443,61 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(Icons.arrow_upward, color: Colors.white, size: 20),
             )
           : null,
+    );
+  }
+}
+
+class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Color textColor;
+  final bool isDark;
+
+  _CollapsingHeaderDelegate({required this.textColor, required this.isDark});
+
+  @override
+  double get minExtent => 44;
+
+  @override
+  double get maxExtent => 70;
+
+  @override
+  bool shouldRebuild(covariant _CollapsingHeaderDelegate oldDelegate) {
+    return textColor != oldDelegate.textColor || isDark != oldDelegate.isDark;
+  }
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final progress = shrinkOffset / (maxExtent - minExtent);
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
+
+    return Container(
+      color: bgColor,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          if (progress < 0.5)
+            Opacity(
+              opacity: 1.0 - (progress * 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Gigs', style: TextStyle(fontSize: 20 - (progress * 6), fontWeight: FontWeight.bold, color: textColor)),
+                  Text('Court', style: TextStyle(fontSize: 20 - (progress * 6), fontWeight: FontWeight.bold, color: textColor)),
+                ],
+              ),
+            ),
+          if (progress >= 0.5)
+            Opacity(
+              opacity: (progress - 0.5) * 2,
+              child: Text('GigsCourt', style: TextStyle(fontSize: 14 + (progress * 4), fontWeight: FontWeight.bold, color: textColor)),
+            ),
+          IconButton(
+            icon: Icon(Icons.notifications_outlined, size: 20 + (4 * (1 - progress.clamp(0.0, 1.0))), color: textColor),
+            onPressed: () {},
+          ),
+        ],
+      ),
     );
   }
 }
