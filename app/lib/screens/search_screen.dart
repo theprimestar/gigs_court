@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import '../models/provider_card_data.dart';
 import '../services/search_service.dart';
 import '../widgets/loading_dots.dart';
@@ -121,7 +122,6 @@ class _SearchScreenState extends State<SearchScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Map
             FlutterMap(
               mapController: _mapController,
               options: MapOptions(
@@ -137,10 +137,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   MarkerLayer(
                     markers: _providers.map((p) {
                       return Marker(
-                        point: LatLng(
-                          _viewerLat,
-                          _viewerLng,
-                        ),
+                        point: LatLng(_viewerLat, _viewerLng),
                         width: 44,
                         height: 44,
                         child: GestureDetector(
@@ -168,7 +165,6 @@ class _SearchScreenState extends State<SearchScreen> {
               ],
             ),
 
-            // Empty state overlay
             if (!_hasSearched)
               Positioned.fill(
                 child: Container(
@@ -190,7 +186,6 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
 
-            // No results overlay
             if (_hasSearched && _providers.isEmpty && !_isLoading)
               Positioned.fill(
                 child: Container(
@@ -219,13 +214,11 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
 
-            // Loading indicator
             if (_isLoading)
               const Positioned.fill(
                 child: Center(child: LoadingDots(color: Color(0xFF1A1F71))),
               ),
 
-            // Top controls
             Positioned(
               top: 0,
               left: 0,
@@ -239,7 +232,6 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Search input
                     TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
@@ -277,7 +269,6 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Radius slider
                     Row(
                       children: [
                         Text('1 km', style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6))),
@@ -309,7 +300,6 @@ class _SearchScreenState extends State<SearchScreen> {
                       ],
                     ),
 
-                    // Popular services chips
                     if (_popularServices.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       SizedBox(
@@ -342,7 +332,6 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                     ],
 
-                    // Toggle buttons
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -400,7 +389,6 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
 
-            // List view
             if (!_isMapView && _providers.isNotEmpty)
               Positioned(
                 top: 280,
@@ -613,7 +601,10 @@ class _ProviderBottomSheet extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/profile/${provider.uid}');
+                  },
                   icon: const Icon(Icons.person_outline, size: 18),
                   label: const Text('View Profile', style: TextStyle(fontSize: 13)),
                   style: OutlinedButton.styleFrom(
