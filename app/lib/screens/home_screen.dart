@@ -20,11 +20,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _homeService = HomeService();
   final _scrollController = ScrollController();
+  final _trendingScrollController = ScrollController();
 
   List<ProviderCardData> _trendingProviders = [];
   List<ProviderCardData> _nearbyProviders = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
+  bool _isLoadingMoreTrending = false;
   bool _showScrollToTop = false;
   bool _usingFallbackLocation = false;
 
@@ -32,14 +34,18 @@ class _HomeScreenState extends State<HomeScreen> {
   double _viewerLng = 8.6753;
   double? _lastFetchLat;
   double? _lastFetchLng;
-  String? _lastCursorDistance;
-  String? _lastCursorId;
-  bool _hasMore = true;
+  String? _lastNearbyCursorDistance;
+  String? _lastNearbyCursorId;
+  String? _lastTrendingCursorDistance;
+  String? _lastTrendingCursorId;
+  bool _hasMoreNearby = true;
+  bool _hasMoreTrending = true;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _trendingScrollController.addListener(_onTrendingScroll);
     _loadCachedData();
   }
 
@@ -170,28 +176,29 @@ class _HomeScreenState extends State<HomeScreen> {
         _viewerLng = newLng;
       }
 
-      final trending = await _homeService.getTrendingProviders(
+      final trendingResult = await _homeService.getTrendingProviders(
         viewerLat: _viewerLat,
         viewerLng: _viewerLng,
       );
 
-      final nearby = await _homeService.getNearbyProviders(
+      final nearbyResult = await _homeService.getNearbyProviders(
         viewerLat: _viewerLat,
         viewerLng: _viewerLng,
       );
 
       if (mounted) {
         setState(() {
-          _trendingProviders = trending;
-          _nearbyProviders = nearby;
+          _trendingProviders = trendingResult.providers;
+          _nearbyProviders = nearbyResult.providers;
           _isLoading = false;
-          _hasMore = true;
+          _hasMoreNearby = nearbyResult.nextCursorId != null;
+          _hasMoreTrending = trendingResult.nextCursorId != null;
           _lastFetchLat = newLat;
           _lastFetchLng = newLng;
-          if (nearby.isNotEmpty) {
-            _lastCursorDistance = nearby.last.distanceMeters.toString();
-            _lastCursorId = nearby.last.uid;
-          }
+          _lastNearbyCursorDistance = nearbyResult.nextCursorDistance;
+          _lastNearbyCursorId = nearbyResult.nextCursorId;
+          _lastTrendingCursorDistance = trendingResult.nextCursorDistance;
+          _lastTrendingCursorId = trendingResult.nextCursorId;
         });
 
         _cacheData();
@@ -244,26 +251,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadMoreNearby() async {
-    if (_isLoadingMore || !_hasMore) return;
+    if (_isLoadingMore || !_hasMoreNearby) return;
 
     setState(() => _isLoadingMore = true);
 
     try {
-      final more = await _homeService.getNearbyProviders(
+      final cursorDistance = _lastNearbyCursorDistance != null ? double.tryParse(_lastNearbyCursorDistance!) : null;
+      final result = await _homeService.getNearbyProviders(
         viewerLat: _viewerLat,
         viewerLng: _viewerLng,
-        cursorDistance: _lastCursorDistance,
-        cursorId: _lastCursorId,
+        cursorDistance: cursorDistance,
+        cursorId: _lastNearbyCursorId,
       );
 
       if (mounted) {
         setState(() {
-          if (more.isEmpty) {
-            _hasMore = false;
+          if (result.providers.isEmpty) {
+            _hasMoreNearby = false;
           } else {
-            _nearbyProviders.addAll(more);
-            _lastCursorDistance = more.last.distanceMeters.toString();
-            _lastCursorId = more.last.uid;
+            _nearbyProviders.addAll(result.providers);
+            _lastNearbyCursorDistance = result.nextCursorDistance;
+            _lastNearbyCursorId = result.nextCursorId;
+            _hasMoreNearby = result.nextCursorId != null;
           }
           _isLoadingMore = false;
         });
@@ -273,6 +282,48 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _isLoadingMore = false);
         _showErrorDialog('Load More Error', e, stack);
       }
+    }
+  }
+
+  Future<void> _loadMoreTrending() async {
+    if (_isLoadingMoreTrending || !_hasMoreTrending) return;
+
+    setState(() => _isLoadingMoreTrending = true);
+
+    try {
+      final cursorDistance = _lastTrendingCursorDistance != null ? double.tryParse(_lastTrendingCursorDistance!) : null;
+      final result = await _homeService.getTrendingProviders(
+        viewerLat: _viewerLat,
+        viewerLng: _viewerLng,
+        cursorDistance: cursorDistance,
+        cursorId: _lastTrendingCursorId,
+      );
+
+      if (mounted) {
+        setState(() {
+          if (result.providers.isEmpty) {
+            _hasMoreTrending = false;
+          } else {
+            _trendingProviders.addAll(result.providers);
+            _lastTrendingCursorDistance = result.nextCursorDistance;
+            _lastTrendingCursorId = result.nextCursorId;
+            _hasMoreTrending = result.nextCursorId != null;
+          }
+          _isLoadingMoreTrending = false;
+        });
+      }
+    } catch (e, stack) {
+      if (mounted) {
+        setState(() => _isLoadingMoreTrending = false);
+        _showErrorDialog('Trending Load Error', e, stack);
+      }
+    }
+  }
+
+  void _onTrendingScroll() {
+    if (_trendingScrollController.position.pixels >=
+        _trendingScrollController.position.maxScrollExtent - 100) {
+      _loadMoreTrending();
     }
   }
 
@@ -306,6 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _trendingScrollController.dispose();
     super.dispose();
   }
 
@@ -377,10 +429,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Text('No trending providers yet', style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.5))),
                               )
                             : ListView.builder(
+                                controller: _trendingScrollController,
                                 scrollDirection: Axis.horizontal,
                                 padding: const EdgeInsets.symmetric(horizontal: 28),
-                                itemCount: _trendingProviders.length,
+                                itemCount: _trendingProviders.length + (_hasMoreTrending ? 1 : 0),
                                 itemBuilder: (context, index) {
+                                  if (index == _trendingProviders.length) {
+                                    return const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 20),
+                                      child: Center(child: LoadingDots(color: Color(0xFF1A1F71))),
+                                    );
+                                  }
                                   return ProviderCardTrending(
                                     provider: _trendingProviders[index],
                                     onTap: () => _showProviderBottomSheet(_trendingProviders[index]),
