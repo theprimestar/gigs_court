@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_paystack_plus/flutter_paystack_plus.dart';
+import 'package:flutter_paystack/flutter_paystack.dart';
 import '../services/credit_service.dart';
 import '../services/chat_service.dart';
 import '../widgets/loading_dots.dart';
