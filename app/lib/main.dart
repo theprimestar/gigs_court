@@ -12,6 +12,7 @@ import 'screens/profile_setup_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/chat_list_screen.dart';
+import 'screens/chat_detail_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/main_shell.dart';
 
@@ -92,7 +93,9 @@ class GigsCourtApp extends StatelessWidget {
                   routes: [
                     GoRoute(
                       path: ':userId',
-                      builder: (context, state) => _Placeholder(label: 'Chat Detail — ${state.pathParameters['userId']}'),
+                      builder: (context, state) => ChatDetailScreen(
+                        otherUserId: state.pathParameters['userId']!,
+                      ),
                     ),
                   ],
                 ),
