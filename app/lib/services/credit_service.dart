@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_paystack/flutter_paystack.dart';
+import 'package:flutter_paystack_plus/flutter_paystack_plus.dart';
 import 'package:http/http.dart' as http;
 import '../config.dart';
 
