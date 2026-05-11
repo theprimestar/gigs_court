@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/loading_dots.dart';
 import 'profile_sheets.dart';
+import 'edit_profile_screen.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -131,7 +133,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       context: context,
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
-                      builder: (_) => SettingsSheet(profile: _profile!),
+                      builder: (_) => SettingsScreen(
+                        profile: _profile!,
+                        onProfileUpdated: _refreshProfile,
+                      ),
                     );
                   }
                 },
@@ -248,10 +253,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   context: context,
                                   isScrollControlled: true,
                                   backgroundColor: Colors.transparent,
-                                  builder: (_) => WorkspaceEditSheet(userId: uid, currentAddress: workspaceAddress),
-                                ).then((updated) {
-                                  if (updated != null && updated is String) _refreshProfile();
-                                });
+                                  builder: (_) => WorkspaceEditSheet(
+                                    userId: uid,
+                                    currentAddress: workspaceAddress,
+                                    onProfileUpdated: _refreshProfile,
+                                  ),
+                                );
                               }
                             : null,
                         child: Row(
@@ -272,10 +279,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   context: context,
                                   isScrollControlled: true,
                                   backgroundColor: Colors.transparent,
-                                  builder: (_) => ServicesEditSheet(userId: uid, currentServices: services),
-                                ).then((updated) {
-                                  if (updated != null) _refreshProfile();
-                                });
+                                  builder: (_) => ServicesEditSheet(
+                                    userId: uid,
+                                    currentServices: services,
+                                    onProfileUpdated: _refreshProfile,
+                                  ),
+                                );
                               }
                             : null,
                         child: Text(services.join(', '), style: TextStyle(fontSize: 13, color: _isOwnProfile ? const Color(0xFF1A1F71) : textColor.withValues(alpha: 0.6))),
@@ -301,10 +310,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   context: context,
                                   isScrollControlled: true,
                                   backgroundColor: Colors.transparent,
-                                  builder: (_) => EditProfileSheet(profile: _profile!),
-                                ).then((updated) {
-                                  if (updated == true) _refreshProfile();
-                                });
+                                  builder: (_) => EditProfileSheet(
+                                    profile: _profile!,
+                                    onProfileUpdated: _refreshProfile,
+                                  ),
+                                );
                               }
                             : () => context.push('/chat/$uid'),
                         style: ElevatedButton.styleFrom(
