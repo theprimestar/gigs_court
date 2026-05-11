@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/loading_dots.dart';
+import 'profile_sheets.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -65,6 +66,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
+  Future<void> _refreshProfile() async {
+    await _loadProfile();
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -100,15 +105,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final reviewCount = _profile!['reviewCount'] as int? ?? 0;
     final credits = _profile!['credits'] as int? ?? 0;
     final createdAt = _profile!['createdAt'];
-    final workspaceAddress = _profile!['workspaceAddress'] as String? ?? '';
+    final workspaceAddress = 'Workspace'; // Will be fetched from Supabase if needed
     final displayRating = reviewCount > 0 ? rating / reviewCount : 0.0;
+    final uid = widget.userId ?? _auth.currentUser?.uid ?? '';
 
     return Scaffold(
       body: SafeArea(
         child: CustomScrollView(
           controller: _scrollController,
           slivers: [
-            // Header
             SliverPersistentHeader(
               pinned: true,
               delegate: _ProfileHeaderDelegate(
@@ -118,18 +123,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 showCollapsed: _showCollapsedHeader,
                 textColor: textColor,
                 isDark: isDark,
-                onMenuTap: () => _showSettings(),
+                onMenuTap: () {
+                  if (_profile != null) {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => SettingsSheet(profile: _profile!),
+                    );
+                  }
+                },
                 onBackTap: () => context.pop(),
               ),
             ),
 
-            // Stats Row
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
                 child: Row(
                   children: [
-                    // Photo
                     Container(
                       width: 72,
                       height: 72,
@@ -142,7 +154,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(width: 20),
-                    // Stats
                     Expanded(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -152,14 +163,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             value: gigCount.toString(),
                             label: 'Gigs',
                             textColor: textColor,
-                            onTap: _isOwnProfile ? () => _showGigHistory() : null,
+                            onTap: _isOwnProfile ? () {} : null,
                           ),
                           _StatItem(
                             icon: Icons.star_outline,
                             value: displayRating.toStringAsFixed(1),
                             label: 'Rating',
                             textColor: textColor,
-                            onTap: () => _showReviews(),
+                            onTap: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (_) => ReviewsSheet(userId: uid),
+                              );
+                            },
                           ),
                           if (_isOwnProfile)
                             _StatItem(
@@ -167,7 +185,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               value: credits.toString(),
                               label: 'Credits',
                               textColor: textColor,
-                              onTap: () => _showCredits(),
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => CreditsSheet(credits: credits),
+                                );
+                              },
                             ),
                         ],
                       ),
@@ -177,7 +202,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Name + details
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -195,14 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: Color(0xFF4CAF50),
                           ),
                         ),
-                        Text(
-                          name,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
-                        ),
+                        Text(name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                       ],
                     ),
                     if (bio.isNotEmpty) ...[
@@ -210,43 +227,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(bio, style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.7))),
                     ],
                     const SizedBox(height: 8),
-                    Text(
-                      '$gigCount30Days gigs this month',
-                      style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6)),
-                    ),
+                    Text('$gigCount30Days gigs this month', style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6))),
                     if (workspaceAddress.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
                           const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF6B7280)),
                           const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              workspaceAddress,
-                              style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6)),
-                            ),
-                          ),
+                          Expanded(child: Text(workspaceAddress, style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6)))),
                         ],
                       ),
                     ],
                     if (services.isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Text(
-                        services.join(', '),
-                        style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6)),
-                      ),
+                      Text(services.join(', '), style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6))),
                     ],
                     const SizedBox(height: 4),
-                    Text(
-                      'Joined ${_formatDate(createdAt)}',
-                      style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.45)),
-                    ),
+                    Text('Joined ${_formatDate(createdAt)}', style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.45))),
                   ],
                 ),
               ),
             ),
 
-            // Action buttons
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(28, 16, 28, 8),
@@ -254,7 +256,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: _isOwnProfile ? () {} : () {},
+                        onPressed: _isOwnProfile
+                            ? () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => EditProfileSheet(profile: _profile!),
+                                ).then((updated) {
+                                  if (updated == true) _refreshProfile();
+                                });
+                              }
+                            : () => context.push('/chat/$uid'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1A1F71),
                           foregroundColor: Colors.white,
@@ -270,11 +283,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: _isOwnProfile ? () => _showRegisterGig() : () {},
+                        onPressed: _isOwnProfile
+                            ? () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => const RegisterGigSheet(),
+                                );
+                              }
+                            : () {},
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isOwnProfile
-                              ? const Color(0xFF4A0E17)
-                              : const Color(0xFF1A1F71),
+                          backgroundColor: _isOwnProfile ? const Color(0xFF4A0E17) : const Color(0xFF1A1F71),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -290,7 +310,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Work Photos (own profile only)
             if (_isOwnProfile) ...[
               SliverToBoxAdapter(
                 child: Padding(
@@ -303,10 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: const Color(0xFF1A1F71).withValues(alpha: 0.5)),
                       ),
-                      child: const Text(
-                        '+ Add Photos',
-                        style: TextStyle(fontSize: 13, color: Color(0xFF1A1F71), fontWeight: FontWeight.w500),
-                      ),
+                      child: const Text('+ Add Photos', style: TextStyle(fontSize: 13, color: Color(0xFF1A1F71), fontWeight: FontWeight.w500)),
                     ),
                   ),
                 ),
@@ -335,83 +351,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
-  void _showSettings() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.phone_android),
-                title: const Text('Phone number privacy'),
-                trailing: Switch(value: true, onChanged: (_) {}),
-              ),
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text('Logout', style: TextStyle(color: Colors.red)),
-                onTap: () async {
-                  await FirebaseAuth.instance.signOut();
-                  if (context.mounted) context.go('/onboarding');
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showRegisterGig() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-        final textColor = isDark ? Colors.white : Colors.black;
-
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.6,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 16),
-              Text('Register a Gig', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
-              const SizedBox(height: 8),
-              Text('People you chatted with recently', style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6))),
-              const SizedBox(height: 16),
-              Expanded(
-                child: Center(
-                  child: Text('No recent chats', style: TextStyle(color: textColor.withValues(alpha: 0.5))),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showGigHistory() {}
-  void _showReviews() {}
-  void _showCredits() {}
 }
 
 class _StatItem extends StatelessWidget {
