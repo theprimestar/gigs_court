@@ -59,14 +59,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
       // 1. Upload photo to ImageKit
       String photoUrl = '';
+      String photoFileId = '';
       final photoPath = _profileData['photoPath'] as String;
       if (photoPath.isNotEmpty) {
-        final uploadedUrl = await ImageKitService.uploadPhoto(
+        final result = await ImageKitService.uploadPhoto(
           File(photoPath),
           uid,
         );
-        if (uploadedUrl != null) {
-          photoUrl = uploadedUrl;
+        if (result != null) {
+          photoUrl = result.url;
+          photoFileId = result.fileId;
         }
       }
 
@@ -74,6 +76,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       await _firestoreService.createProfile(
         fullName: _profileData['fullName'] as String,
         photoUrl: photoUrl,
+        photoFileId: photoFileId,
         phone: _profileData['phone'] as String,
         bio: _profileData['bio'] as String,
         services: List<String>.from(_profileData['services'] as List),
