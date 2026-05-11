@@ -15,6 +15,7 @@ import 'screens/search_screen.dart';
 import 'screens/chat_list_screen.dart';
 import 'screens/chat_detail_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/admin_screen.dart';
 import 'screens/main_shell.dart';
 
 void main() async {
@@ -125,7 +126,7 @@ class GigsCourtApp extends StatelessWidget {
               routes: [
                 GoRoute(
                   path: '/admin',
-                  builder: (context, state) => const _Placeholder(label: 'Admin'),
+                  builder: (context, state) => const AdminScreen(),
                 ),
               ],
             ),
