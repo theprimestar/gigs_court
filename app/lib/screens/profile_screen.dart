@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/loading_dots.dart';
 import 'profile_sheets.dart';
 import 'edit_profile_screen.dart';
@@ -25,6 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _profile;
   bool _isLoading = true;
   bool _showCollapsedHeader = false;
+  StreamSubscription? _profileListener;
 
   bool get _isOwnProfile =>
       widget.userId == null || widget.userId == _auth.currentUser?.uid;
@@ -33,7 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadProfile();
+    _loadCachedThenListen();
   }
 
   void _onScroll() {
@@ -43,23 +47,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _loadProfile() async {
-    try {
-      final uid = widget.userId ?? _auth.currentUser?.uid;
-      if (uid == null) return;
+  Future<void> _loadCachedThenListen() async {
+    final uid = widget.userId ?? _auth.currentUser?.uid;
+    if (uid == null) return;
 
-      final doc = await _firestore.collection('profiles').doc(uid).get();
-      if (mounted && doc.exists) {
+    // Show cached data first
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString('profile_cache_$uid');
+      if (cached != null) {
         setState(() {
-          _profile = doc.data();
+          _profile = jsonDecode(cached) as Map<String, dynamic>;
           _isLoading = false;
         });
+      }
+    } catch (_) {}
+
+    // Attach real-time listener
+    _profileListener?.cancel();
+    _profileListener = _firestore
+        .collection('profiles')
+        .doc(uid)
+        .snapshots()
+        .listen((doc) async {
+      if (doc.exists && mounted) {
+        final data = doc.data();
+        setState(() {
+          _profile = data;
+          _isLoading = false;
+        });
+        // Cache the fresh data
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('profile_cache_$uid', jsonEncode(data));
+        } catch (_) {}
       } else if (mounted) {
         setState(() => _isLoading = false);
       }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-    }
+    });
   }
 
   String _formatDate(dynamic timestamp) {
@@ -69,11 +94,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _refreshProfile() async {
-    await _loadProfile();
+    // Listener handles updates automatically — this is kept for sheet callbacks
+    final uid = widget.userId ?? _auth.currentUser?.uid;
+    if (uid == null) return;
+    final doc = await _firestore.collection('profiles').doc(uid).get();
+    if (mounted && doc.exists) {
+      setState(() => _profile = doc.data());
+    }
   }
 
   @override
   void dispose() {
+    _profileListener?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
