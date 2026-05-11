@@ -8,6 +8,7 @@ class FirestoreService {
   Future<void> createProfile({
     required String fullName,
     required String photoUrl,
+    required String photoFileId,
     required String phone,
     required String bio,
     required List<String> services,
@@ -17,6 +18,7 @@ class FirestoreService {
     await _firestore.collection('profiles').doc(uid).set({
       'fullName': fullName,
       'photoUrl': photoUrl,
+      'photoFileId': photoFileId,
       'phone': phone,
       'bio': bio,
       'services': services,
