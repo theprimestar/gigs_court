@@ -51,6 +51,13 @@ class ChatService {
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
 
+  String? get currentUid => _auth.currentUser?.uid;
+
+  Future<Map<String, dynamic>?> getUserProfile(String uid) async {
+    final doc = await _firestore.collection('profiles').doc(uid).get();
+    return doc.data();
+  }
+
   String _getChatId(String uid1, String uid2) {
     final sorted = [uid1, uid2]..sort();
     return '${sorted[0]}_${sorted[1]}';
@@ -73,7 +80,6 @@ class ChatService {
         final participants = List<String>.from(data['participants']);
         final otherUid = participants.firstWhere((p) => p != currentUid);
 
-        // Fetch other user's profile
         final userDoc = await _firestore.collection('profiles').doc(otherUid).get();
         final userName = userDoc.data()?['fullName'] as String? ?? 'Unknown';
         final userPhoto = userDoc.data()?['photoUrl'] as String? ?? '';
@@ -216,12 +222,10 @@ class ChatService {
 
     final chatId = _getChatId(currentUid, otherUid);
 
-    // Reset unread count
     await _firestore.collection('chats').doc(chatId).update({
       'unreadCount_$currentUid': 0,
     });
 
-    // Mark all unread messages as read
     final messages = await _firestore
         .collection('chats')
         .doc(chatId)
@@ -276,7 +280,6 @@ class ChatService {
       'created_at': FieldValue.serverTimestamp(),
     });
 
-    // Also create in global gigs collection
     await _firestore.collection('gigs').doc(gigRef.id).set({
       'provider_id': currentUid,
       'client_id': otherUid,
@@ -346,7 +349,6 @@ class ChatService {
     final providerUid = gigData['provider_id'] as String;
     final gigId = gig.id;
 
-    // Update gig
     await gig.reference.update({
       'status': 'completed',
       'completed_at': FieldValue.serverTimestamp(),
@@ -359,7 +361,6 @@ class ChatService {
       'review': {'rating': rating, 'text': reviewText ?? ''},
     });
 
-    // Update provider stats
     final providerRef = _firestore.collection('profiles').doc(providerUid);
     final providerDoc = await providerRef.get();
     final providerData = providerDoc.data()!;
@@ -367,7 +368,6 @@ class ChatService {
     final currentReviewCount = (providerData['reviewCount'] as int?) ?? 0;
     final currentGigCount = (providerData['gigCount'] as int?) ?? 0;
 
-    // Check if this client already reviewed this provider
     final previousReviews = await _firestore
         .collection('reviews')
         .where('provider_id', isEqualTo: providerUid)
@@ -376,7 +376,6 @@ class ChatService {
         .get();
 
     if (previousReviews.docs.isEmpty) {
-      // New review
       await providerRef.update({
         'rating': currentRating + rating,
         'reviewCount': currentReviewCount + 1,
@@ -387,7 +386,6 @@ class ChatService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } else {
-      // Overwrite existing review
       final oldReview = previousReviews.docs.first.data();
       final oldRating = (oldReview['rating'] as num?)?.toInt() ?? 0;
       await providerRef.update({
@@ -400,7 +398,6 @@ class ChatService {
       });
     }
 
-    // Save review document (overwrite if exists)
     if (previousReviews.docs.isEmpty) {
       await _firestore.collection('reviews').add({
         'provider_id': providerUid,
