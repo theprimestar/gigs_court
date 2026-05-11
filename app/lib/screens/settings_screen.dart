@@ -145,7 +145,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  // Privacy
                   _SectionHeader(title: 'Privacy', textColor: textColor),
                   _ToggleRow(
                     title: 'Show phone number to clients',
@@ -155,8 +154,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.phone_android,
                     textColor: textColor,
                   ),
-
-                  // Notifications
                   _SectionHeader(title: 'Notifications', textColor: textColor),
                   _ToggleRow(
                     title: 'Push Notifications',
@@ -174,26 +171,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.email_outlined,
                     textColor: textColor,
                   ),
-
-                  // Credits
                   _SectionHeader(title: 'Credits', textColor: textColor),
                   _TapRow(title: 'My Credits', subtitle: '$credits credits remaining', icon: Icons.monetization_on_outlined, onTap: _showCreditsSheet, textColor: textColor),
                   _TapRow(title: 'Buy Credits', subtitle: 'Credits allow clients to rate and review your work', icon: Icons.add_circle_outline, onTap: _showCreditsSheet, textColor: textColor),
                   _TapRow(title: 'Credit History', icon: Icons.history, onTap: _showCreditHistory, textColor: textColor),
-
-                  // Support
                   _SectionHeader(title: 'Support', textColor: textColor),
                   _TapRow(title: 'Contact Support', subtitle: 'Get help or report an issue', icon: Icons.support_outlined, onTap: _showContactSupport, textColor: textColor),
-
-                  // Legal
                   _SectionHeader(title: 'Legal', textColor: textColor),
                   _TapRow(title: 'Terms & Privacy', icon: Icons.description_outlined, onTap: _showTermsPrivacy, textColor: textColor),
-
-                  // About
                   _SectionHeader(title: 'About', textColor: textColor),
                   _InfoRow(title: 'App Version', value: '1.0.0', textColor: textColor),
-
-                  // Account
                   _SectionHeader(title: 'Account', textColor: textColor),
                   const SizedBox(height: 8),
                   SizedBox(
@@ -223,8 +210,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-
-// ─── SETTINGS SUB-SECTIONS ──────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -286,8 +271,6 @@ class _InfoRow extends StatelessWidget {
     trailing: Text(value, style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.5))),
   );
 }
-
-// ─── CREDITS SHEET (inside settings) ────────────
 
 class _CreditsSheetContent extends StatelessWidget {
   final int credits;
@@ -356,8 +339,7 @@ class _CreditsSheetContent extends StatelessWidget {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment cancelled')));
     }
   }
-
-// ─── CREDIT HISTORY SHEET ───────────────────────
+}
 
 class _CreditHistorySheet extends StatefulWidget {
   @override
@@ -425,8 +407,6 @@ class _CreditHistorySheetState extends State<_CreditHistorySheet> {
     );
   }
 }
-
-// ─── CONTACT SUPPORT SHEET ──────────────────────
 
 class _ContactSupportSheet extends StatefulWidget {
   @override
@@ -501,17 +481,14 @@ class _ContactSupportSheetState extends State<_ContactSupportSheet> {
           const SizedBox(height: 4),
           Text("We're here to help. Submit a ticket and we'll respond promptly.", style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.5)), textAlign: TextAlign.center),
           const SizedBox(height: 12),
-
           if (_submitted)
             Container(padding: const EdgeInsets.all(12), margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), child: const Text('✓ Ticket submitted successfully. We\'ll review it shortly.', style: TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.w500))),
-
           TextField(controller: _subjectController, style: TextStyle(fontSize: 14, color: textColor), decoration: InputDecoration(labelText: 'Subject', hintText: 'e.g. Payment issue, Bug report...', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
           const SizedBox(height: 8),
           TextField(controller: _messageController, maxLines: 4, style: TextStyle(fontSize: 14, color: textColor), decoration: InputDecoration(labelText: 'Message', hintText: 'Describe your issue in detail...', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
           const SizedBox(height: 12),
           SizedBox(width: double.infinity, child: ElevatedButton(onPressed: _submitting ? null : _submitTicket, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A1F71), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))), child: _submitting ? const LoadingDots(color: Colors.white) : const Text('Submit Ticket', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)))),
           const SizedBox(height: 20),
-
           Text('My Tickets', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor)),
           const SizedBox(height: 8),
           Expanded(
@@ -536,8 +513,6 @@ class _ContactSupportSheetState extends State<_ContactSupportSheet> {
     );
   }
 }
-
-// ─── TERMS & PRIVACY SHEET ──────────────────────
 
 class _TermsPrivacySheet extends StatelessWidget {
   @override
