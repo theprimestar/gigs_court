@@ -143,7 +143,7 @@ class ChatService {
         .doc(chatId)
         .collection('messages')
         .orderBy('createdAt', descending: true)
-        .startAfter(before)
+        .startAfter([Timestamp.fromDate(before)])
         .limit(20)
         .get();
 
