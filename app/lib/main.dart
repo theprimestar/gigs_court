@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_paystack/flutter_paystack.dart';
 import 'config.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -29,6 +30,9 @@ void main() async {
       return await user.getIdToken() ?? '';
     },
   );
+
+  final paystack = PaystackPlugin();
+  await paystack.initialize(publicKey: AppConfig.paystackPublicKey);
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
