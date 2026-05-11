@@ -31,7 +31,7 @@ class _SearchScreenState extends State<SearchScreen> {
   double _viewerLat = 9.082;
   double _viewerLng = 8.6753;
 
-  String? _lastCursorDistance;
+  double? _lastCursorDistance;
   String? _lastCursorId;
   bool _hasMore = true;
 
