@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_paystack/flutter_paystack.dart';
+import 'package:flutter_paystack_plus/flutter_paystack_plus.dart';
 import 'config.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
