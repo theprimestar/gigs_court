@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
-import 'package:gigs_court/services/supabase_auth_service.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -119,8 +118,6 @@ class _AuthScreenState extends State<AuthScreen>
         }
         return;
       }
-
-      await SupabaseAuthService.getSupabaseToken();
 
       if (mounted) {
         HapticFeedback.heavyImpact();
