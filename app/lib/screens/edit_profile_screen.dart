@@ -130,7 +130,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
               width: 72, height: 72,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                image: (widget.profile['photoUrl'] as String?).isNotEmpty == true
+                image: (widget.profile['photoUrl'] as String?)?.isNotEmpty == true
                     ? DecorationImage(image: NetworkImage(widget.profile['photoUrl'] as String), fit: BoxFit.cover)
                     : null,
                 color: const Color(0xFF1A1F71),
