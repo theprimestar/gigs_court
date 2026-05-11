@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../services/credit_service.dart';
@@ -56,12 +57,19 @@ class CreditsSheet extends StatelessWidget {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to initialize payment')));
       return;
     }
-    final charge = Charge()..reference = reference..amount = (amount * 100).toString()..currency = 'NGN'..email = FirebaseAuth.instance.currentUser?.email ?? '';
+    final charge = Charge()
+      ..reference = reference
+      ..amount = (amount * 100).toString()
+      ..currency = 'NGN'
+      ..email = FirebaseAuth.instance.currentUser?.email ?? '';
     try {
       final response = await PaystackPlugin().checkout(context, charge: charge);
       if (response.status == 'success') {
-        final verified = await service.verifyAndUpdateCredits(reference, credits);
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(verified ? 'Credits added!' : 'Payment received. Refreshing...')));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Payment received! Credits will be added shortly.')),
+          );
+        }
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment cancelled')));
