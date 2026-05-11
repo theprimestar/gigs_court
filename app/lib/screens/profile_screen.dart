@@ -105,7 +105,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final reviewCount = _profile!['reviewCount'] as int? ?? 0;
     final credits = _profile!['credits'] as int? ?? 0;
     final createdAt = _profile!['createdAt'];
-    final workspaceAddress = 'Workspace'; // Will be fetched from Supabase if needed
+    final workspaceAddress = _profile!['workspaceAddress'] as String? ?? '';
+    final phone = _profile!['phone'] as String? ?? '';
+    final showPhone = _profile!['showPhone'] != false;
     final displayRating = reviewCount > 0 ? rating / reviewCount : 0.0;
     final uid = widget.userId ?? _auth.currentUser?.uid ?? '';
 
@@ -163,7 +165,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             value: gigCount.toString(),
                             label: 'Gigs',
                             textColor: textColor,
-                            onTap: _isOwnProfile ? () {} : null,
+                            onTap: _isOwnProfile
+                                ? () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (_) => GigHistorySheet(userId: uid),
+                                    );
+                                  }
+                                : null,
                           ),
                           _StatItem(
                             icon: Icons.star_outline,
@@ -230,17 +241,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Text('$gigCount30Days gigs this month', style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6))),
                     if (workspaceAddress.isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF6B7280)),
-                          const SizedBox(width: 4),
-                          Expanded(child: Text(workspaceAddress, style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6)))),
-                        ],
+                      GestureDetector(
+                        onTap: _isOwnProfile
+                            ? () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => WorkspaceEditSheet(userId: uid, currentAddress: workspaceAddress),
+                                ).then((updated) {
+                                  if (updated != null && updated is String) _refreshProfile();
+                                });
+                              }
+                            : null,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFF6B7280)),
+                            const SizedBox(width: 4),
+                            Expanded(child: Text(workspaceAddress, style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6)))),
+                          ],
+                        ),
                       ),
                     ],
                     if (services.isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Text(services.join(', '), style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.6))),
+                      GestureDetector(
+                        onTap: _isOwnProfile
+                            ? () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => ServicesEditSheet(userId: uid, currentServices: services),
+                                ).then((updated) {
+                                  if (updated != null) _refreshProfile();
+                                });
+                              }
+                            : null,
+                        child: Text(services.join(', '), style: TextStyle(fontSize: 13, color: _isOwnProfile ? const Color(0xFF1A1F71) : textColor.withValues(alpha: 0.6))),
+                      ),
                     ],
                     const SizedBox(height: 4),
                     Text('Joined ${_formatDate(createdAt)}', style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.45))),
@@ -292,7 +331,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   builder: (_) => const RegisterGigSheet(),
                                 );
                               }
-                            : () {},
+                            : () {
+                                if (showPhone && phone.isNotEmpty) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Contact'),
+                                      content: Text(phone),
+                                      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Phone number is private')),
+                                  );
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _isOwnProfile ? const Color(0xFF4A0E17) : const Color(0xFF1A1F71),
                           foregroundColor: Colors.white,
@@ -310,40 +364,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            if (_isOwnProfile) ...[
+            if (_isOwnProfile)
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
-                  child: GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF1A1F71).withValues(alpha: 0.5)),
-                      ),
-                      child: const Text('+ Add Photos', style: TextStyle(fontSize: 13, color: Color(0xFF1A1F71), fontWeight: FontWeight.w500)),
-                    ),
-                  ),
-                ),
+                child: WorkPhotosSection(userId: uid),
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(28),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.photo_library_outlined, size: 40, color: Color(0xFF6B7280)),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Add photos so clients can see your work.\nThis helps them trust you.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.5)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
 
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
