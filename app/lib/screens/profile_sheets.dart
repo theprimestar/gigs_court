@@ -60,7 +60,7 @@ class CreditsSheet extends StatelessWidget {
     }
     final charge = Charge()
       ..reference = reference
-      ..amount = (amount * 100).toString()
+      ..amount = amount * 100
       ..currency = 'NGN'
       ..email = FirebaseAuth.instance.currentUser?.email ?? '';
     try {
