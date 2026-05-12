@@ -20,13 +20,24 @@ jobs:
 
       - name: Build unsigned iOS
         working-directory: app
-        run: flutter build ios --release --no-codesign
+        run: |
+          cd ios
+          pod install
+          xcodebuild clean build \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
 
       - name: Create unsigned IPA
         working-directory: app
         run: |
           cd ios
-          xcodebuild clean archive \
+          xcodebuild archive \
             -workspace Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
