@@ -18,31 +18,20 @@ jobs:
         working-directory: app
         run: flutter pub get
 
-      - name: Build unsigned iOS
+      - name: Build unsigned iOS IPA
         working-directory: app
         run: flutter build ios --release --no-codesign
 
-      - name: Create unsigned IPA
+      - name: Create IPA
         working-directory: app
         run: |
-          cd ios
-          xcodebuild clean archive \
-            -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath ../build/ios/Runner.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
-          cd ..
           mkdir -p Payload
-          cp -r build/ios/Runner.xcarchive/Products/Applications/Runner.app Payload/
-          mkdir -p build/ios/ipa
-          zip -r build/ios/ipa/GigsCourt.ipa Payload/
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r gigscourt-unsigned.ipa Payload
           rm -rf Payload
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: gigscourt-unsigned.ipa
-          path: app/build/ios/ipa/GigsCourt.ipa
+          path: app/gigscourt-unsigned.ipa
