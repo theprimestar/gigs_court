@@ -32,8 +32,7 @@ void main() async {
     },
   );
 
-  final paystack = PaystackPlugin();
-  await paystack.initialize(publicKey: AppConfig.paystackPublicKey);
+  PaystackPlus.init(publicKey: AppConfig.paystackPublicKey);
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
