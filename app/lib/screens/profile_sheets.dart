@@ -53,19 +53,17 @@ class CreditsSheet extends StatelessWidget {
 
   void _startPayment(BuildContext context, int amount, int credits) async {
     final service = CreditService();
-    final reference = await service.initializePayment(amount, credits);
-    if (reference == null) {
+    final accessCode = await service.initializePayment(amount, credits);
+    if (accessCode == null) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to initialize payment')));
       return;
     }
-    final charge = Charge()
-      ..reference = reference
-      ..amount = amount * 100
-      ..currency = 'NGN'
-      ..email = FirebaseAuth.instance.currentUser?.email ?? '';
     try {
-      final response = await PaystackPlugin().checkout(context, charge: charge);
-      if (response.status == 'success') {
+      final result = await PaystackPlus.checkout(
+        context: context,
+        accessCode: accessCode,
+      );
+      if (result.status == PaystackPlus.success) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Payment received! Credits will be added shortly.')),
