@@ -33,7 +33,7 @@ class CreditService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['data']['reference'] as String?;
+        return data['data']['access_code'] as String?;
       }
       return null;
     } catch (e) {
